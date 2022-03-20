@@ -1,5 +1,5 @@
-use self::entry::CacheEntry;
+use super::entry::CacheEntry;
 
-pub struct Cache {
-    pub entries: Vec<CacheEntry>
+pub struct Cache<'a> {
+    pub entries: Vec<CacheEntry<'a>>
 }

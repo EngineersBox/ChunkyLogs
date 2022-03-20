@@ -1,6 +1,6 @@
-use crate::group::log_entry::LogEntry;
+use crate::data::group::log_entry::LogEntry;
 
-pub struct CacheEntry {
-    pub entry: LogEntry;
-    pub ttl: u32;
+pub struct CacheEntry<'a> {
+    pub entry: LogEntry<'a>,
+    pub ttl: u32,
 }
