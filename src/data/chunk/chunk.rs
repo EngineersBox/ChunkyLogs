@@ -12,10 +12,10 @@ pub struct Chunk {
     pub decompressed_data: String,
 }
 
-static FROM_TIMESTAMP_OFFSET: usize = 0;
-static TO_TIMESTAMP_OFFSET: usize = FROM_TIMESTAMP_OFFSET + 64;
-static DATA_LENGTH_OFFSET: usize = TO_TIMESTAMP_OFFSET + 64;
-static COMPRESSED_DATA_OFFSET: usize = DATA_LENGTH_OFFSET + 32;
+const FROM_TIMESTAMP_OFFSET: usize = 0;
+const TO_TIMESTAMP_OFFSET: usize = FROM_TIMESTAMP_OFFSET + 64;
+const DATA_LENGTH_OFFSET: usize = TO_TIMESTAMP_OFFSET + 64;
+const COMPRESSED_DATA_OFFSET: usize = DATA_LENGTH_OFFSET + 32;
 
 impl Chunk {
     pub fn new() -> Chunk {
