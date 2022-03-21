@@ -2,7 +2,7 @@ use super::exceptions::chunk_exceptions;
 
 use std::convert::TryInto;
 
-pub type Byte = u8;
+type Byte = u8;
 
 pub struct Chunk {
     pub ts_from: u64,

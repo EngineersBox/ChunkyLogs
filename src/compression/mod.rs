@@ -1,2 +1,2 @@
-pub mod handler;
+pub mod compressor;
 pub mod exception;
