@@ -1,14 +1,20 @@
 use super::exceptions::chunk_exceptions;
 use std::convert::TryInto;
 
-type Byte = u8;
+pub type Byte = u8;
+
+#[derive(PartialEq, Eq)]
+pub enum ChunkCompressionState {
+    COMPRESSED,
+    DECOMPRESSED,
+}
 
 pub struct Chunk {
     pub ts_from: u64,
     pub ts_to: u64,
     pub length: u32,
-    pub compressed_data: Vec<Byte>,
-    pub decompressed_data: String,
+    pub data: Vec<Byte>,
+    pub state: ChunkCompressionState,
 }
 
 const FROM_TIMESTAMP_OFFSET: usize = 0;
@@ -22,8 +28,8 @@ impl Chunk {
             ts_from: 0,
             ts_to: 0,
             length: 0,
-            compressed_data: vec!{},
-            decompressed_data: String::new(),
+            data: Vec::new(),
+            state: ChunkCompressionState::DECOMPRESSED,
         }
     }
     pub fn from_bytes(bytes: &Vec<Byte>) -> Result<Chunk, chunk_exceptions::ChunkProcessingException> {
@@ -38,15 +44,15 @@ impl Chunk {
         let mut new_chunk: Chunk = Chunk::new();
         let bytes_slice: &[Byte] = bytes.as_slice();
 
-        let mut ts_from_bytes: [u8; 8] = [0; 8];
+        let mut ts_from_bytes: [Byte; 8] = [0; 8];
         ts_from_bytes.copy_from_slice(&bytes_slice[FROM_TIMESTAMP_OFFSET..TO_TIMESTAMP_OFFSET]);
         new_chunk.ts_from = u64::from_ne_bytes(ts_from_bytes);
 
-        let mut ts_to_bytes: [u8; 8] = [0; 8];
+        let mut ts_to_bytes: [Byte; 8] = [0; 8];
         ts_to_bytes.copy_from_slice(&bytes_slice[TO_TIMESTAMP_OFFSET..DATA_LENGTH_OFFSET]);
         new_chunk.ts_to = u64::from_ne_bytes(ts_to_bytes);
 
-        let mut length_bytes: [u8; 4] = [0; 4];
+        let mut length_bytes: [Byte; 4] = [0; 4];
         length_bytes.copy_from_slice(&bytes_slice[DATA_LENGTH_OFFSET..COMPRESSED_DATA_OFFSET]);
         new_chunk.length = u32::from_ne_bytes(length_bytes);
 
@@ -60,7 +66,8 @@ impl Chunk {
                 ),
             });
         }
-        new_chunk.compressed_data = bytes_slice[COMPRESSED_DATA_OFFSET..].to_vec();
+        new_chunk.data = bytes_slice[COMPRESSED_DATA_OFFSET..].to_vec();
+        new_chunk.state = ChunkCompressionState::COMPRESSED;
         return Ok(new_chunk);
     }
     pub fn to_bytes(&self) -> Vec<Byte> {
