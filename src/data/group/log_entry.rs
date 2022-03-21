@@ -1,3 +1,5 @@
+use chrono::{DateTime, Utc};
+
 pub enum LogAction {
     CREATE,
     UPDATE,
@@ -6,7 +8,7 @@ pub enum LogAction {
 }
 
 pub struct LogEntry<'a> {
-    pub timestamp: u32,
+    pub timestamp: DateTime<Utc>,
     pub action: LogAction,
     pub target: &'a str,
     pub desc: &'a str,

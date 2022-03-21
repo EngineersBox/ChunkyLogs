@@ -18,7 +18,7 @@ pub struct Compressor {
 
 pub trait CompressionHandler {
     fn compress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::CompressionError>;
-    fn decompress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError>
+    fn decompress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError>;
 }
 
 impl CompressionHandler for Compressor {

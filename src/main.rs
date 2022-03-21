@@ -12,6 +12,7 @@ extern crate slog_async;
 extern crate slog_json;
 extern crate lazy_static;
 extern crate regex;
+extern crate chrono;
 
 use lazy_static::lazy_static;
 use slog::Logger;
@@ -24,7 +25,6 @@ lazy_static! {
 }
 
 fn main() {
-    println!("Hello, world!");
     let mut properties: Config = Config::new("config/config.properties");
     properties.read();
 }
