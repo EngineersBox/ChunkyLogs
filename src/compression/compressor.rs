@@ -24,7 +24,7 @@ pub trait CompressionHandler {
 impl CompressionHandler for Compressor {
     fn compress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::CompressionError> {
         self.action = CompressionAction::COMPRESS;
-        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        let mut encoder: ZlibEncoder<Vec<Byte>> = ZlibEncoder::new(Vec::new(), Compression::default());
         match encoder.write_all(data) {
             Err(e) => return Err(compressor_exceptions::CompressionError{
                 message: e.to_string()
@@ -43,7 +43,7 @@ impl CompressionHandler for Compressor {
     }
     fn decompress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError> {
         self.action = CompressionAction::DECOMPRESS;
-        let mut decoder = GzDecoder::new(data);
+        let mut decoder: GzDecoder<&[Byte]> = GzDecoder::new(data);
         let mut buffer: String = String::new();
         return match decoder.read_to_string(&mut buffer) {
             Err(e) => Err(compressor_exceptions::DecompressionError{

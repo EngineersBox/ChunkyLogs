@@ -1,4 +1,3 @@
-use std::fmt;
 use crate::data::group::exceptions::group_exceptions;
 use super::log_entry::LogEntry;
 

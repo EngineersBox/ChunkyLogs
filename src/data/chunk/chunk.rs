@@ -1,5 +1,4 @@
 use super::exceptions::chunk_exceptions;
-
 use std::convert::TryInto;
 
 type Byte = u8;
