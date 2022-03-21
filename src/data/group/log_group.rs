@@ -58,7 +58,7 @@ impl LogGroup {
         }
         return match String::from_utf8(buffer) {
             Err(e) => Err(e),
-            Ok(s) => (s, idx),
+            Ok(s) => Ok((s, idx)),
         };
     }
     fn process_entry(data: &[Byte]) -> Result<(LogEntry, usize), group_exceptions::GroupChunkProcessingError> {
@@ -105,7 +105,7 @@ impl LogGroup {
                 idx = i;
             },
         };
-        if data.len == idx {
+        if data.len() == idx {
             return Ok((log_entry, idx));
         }
         match LogGroup::process_bytes_to_string(idx, data) {

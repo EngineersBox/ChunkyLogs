@@ -1,5 +1,6 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 
+#[derive(Clone)]
 pub enum LogAction {
     CREATE,
     UPDATE,
@@ -30,6 +31,7 @@ impl Into<u8> for LogAction {
     }
 }
 
+#[derive(Clone)]
 pub struct LogEntry {
     pub timestamp: DateTime<Utc>,
     pub action: LogAction,
