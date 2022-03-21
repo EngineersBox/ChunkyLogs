@@ -16,16 +16,13 @@ pub struct Compressor {
     pub action: CompressionAction,
 }
 
-impl Compressor {
-    pub fn new() -> Compressor {
-        Compressor{
-            action: CompressionAction::IDLE,
-        }
-    }
-    pub fn compress_vec(&mut self, data: &Vec<Byte>) -> Result<Vec<Byte>, compressor_exceptions::CompressionError> {
-        return self.compress_slice(data.as_slice());
-    }
-    pub fn compress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::CompressionError> {
+pub trait CompressionHandler {
+    fn compress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::CompressionError>;
+    fn decompress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError>
+}
+
+impl CompressionHandler for Compressor {
+    fn compress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::CompressionError> {
         self.action = CompressionAction::COMPRESS;
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
         match encoder.write_all(data) {
@@ -44,10 +41,7 @@ impl Compressor {
             },
         };
     }
-    pub fn decompress_vec(&mut self, data: &Vec<Byte>) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError> {
-        return self.decompress_slice(data.as_slice());
-    }
-    pub fn decompress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError> {
+    fn decompress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError> {
         self.action = CompressionAction::DECOMPRESS;
         let mut decoder = GzDecoder::new(data);
         let mut buffer: String = String::new();
@@ -60,5 +54,19 @@ impl Compressor {
                 Ok(buffer.into_bytes())
             },
         };
+    }
+}
+
+impl Compressor {
+    pub fn new() -> Compressor {
+        Compressor{
+            action: CompressionAction::IDLE,
+        }
+    }
+    pub fn compress_vec(&mut self, data: &Vec<Byte>) -> Result<Vec<Byte>, compressor_exceptions::CompressionError> {
+        return self.compress_slice(data.as_slice());
+    }
+    pub fn decompress_vec(&mut self, data: &Vec<Byte>) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError> {
+        return self.decompress_slice(data.as_slice());
     }
 }
