@@ -36,7 +36,7 @@ fn main() {
     let log_target: &[u8] = "test target".as_bytes();
     let mut entries: Vec<u8> = Vec::new();
     for i in (0 as u64)..(10 as u64) {
-        let ts_bytes: [u8; 8] = i.to_be_bytes();
+        let ts_bytes: [u8; 8] = (i * 1000).to_be_bytes();
         for ts_byte in ts_bytes.iter() {
             entries.push(*ts_byte);
         }
@@ -141,10 +141,10 @@ fn main() {
 * 00, 00, 00, 00, 00, 00, 00, 01,
 * 00, 00, 01, EB,
 *  ---- DECOMPRESSED DATA ----
-* TIMESTAMP: 00, 00, 00, 00, 00, 00, 00, 00,
-* ACTION:    00,
-* TARGET:    74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* MESSAGE:   74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
+* 00, 00, 00, 00, 00, 00, 00, 00,
+* 00,
+* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
+* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
 *
 * 00, 00, 00, 00, 00, 00, 00, 01,
 * 01,
