@@ -7,11 +7,7 @@ use super::log_entry::LogEntry;
 
 const MAX_ENTRIES_PER_GROUP: usize = 1000;
 const MIN_LOG_ENTRY_SIZE: usize = 10; // Ex: "<8 bytes timestamp><1 byte action><n bytes target><n bytes message>\0x00"
-static LOG_ENTRY_SEPARATOR: &'static str = "";
-
-const LOG_ENTRY_TIMESTAMP_OFFSET: usize = 0;
-const LOG_ENTRY_ACTION_OFFSET: usize = LOG_ENTRY_TIMESTAMP_OFFSET + 8;
-const LOG_ENTRY_TARGET_OFFSET: usize = LOG_ENTRY_ACTION_OFFSET + 1;
+const DECOMPRESSED_DATA_OFFSET: usize = 8 + 8 + 4;
 
 pub struct LogGroup {
     pub ts_from: DateTime<Utc>,
@@ -54,9 +50,9 @@ impl LogGroup {
         log_group.ts_from = epoch_to_datetime(chunk.ts_from);
         log_group.ts_to = epoch_to_datetime(chunk.ts_to);
 
-        let mut idx: usize = 0;
+        let mut idx: usize = DECOMPRESSED_DATA_OFFSET;
         loop {
-            if idx >= chunk.data.len() {
+            if idx == chunk.data.len() - 1 && chunk.data[idx] == 0x0 {
                 break;
             }
             match LogEntry::process_entry(&chunk.data.as_slice()[idx..]) {
@@ -65,10 +61,10 @@ impl LogGroup {
                 }),
                 Ok((log_entry, i)) => {
                     log_group.entries.push(log_entry);
-                    idx = i;
+                    idx += i;
                 },
             };
         }
-        return Ok(LogGroup::new());
+        return Ok(log_group);
     }
 }

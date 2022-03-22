@@ -45,14 +45,14 @@ impl CompressionHandler for Compressor {
     fn decompress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError> {
         self.action = CompressionAction::DECOMPRESS;
         let mut decoder: ZlibDecoder<&[Byte]> = ZlibDecoder::new(data);
-        let mut buffer: String = String::new();
-        return match decoder.read_to_string(&mut buffer) {
+        let mut buffer: Vec<Byte> = Vec::new();
+        return match decoder.read_to_end(&mut buffer) {
             Err(e) => Err(compressor_exceptions::DecompressionError{
                 message: e.to_string()
             }),
             Ok(_) => {
                 self.action = CompressionAction::IDLE;
-                Ok(buffer.into_bytes())
+                Ok(buffer)
             },
         };
     }

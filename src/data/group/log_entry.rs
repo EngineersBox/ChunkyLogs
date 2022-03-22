@@ -4,7 +4,7 @@ use crate::data::chunk::chunk::Byte;
 use crate::data::datetime::datetime_utils::epoch_to_datetime;
 use crate::data::group::exceptions::group_exceptions;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum LogAction {
     CREATE,
     UPDATE,
@@ -87,21 +87,23 @@ impl LogEntry {
         }
         let mut log_entry: LogEntry = LogEntry::new();
 
-        let mut timestamp_bytes: [Byte; 8] = [0; 8];
+        let mut timestamp_bytes: [Byte; 8] = [0; LOG_ENTRY_ACTION_OFFSET];
         timestamp_bytes.copy_from_slice(&data[LOG_ENTRY_TIMESTAMP_OFFSET..LOG_ENTRY_ACTION_OFFSET]);
         log_entry.timestamp = epoch_to_datetime(u64::from_be_bytes(timestamp_bytes));
 
         log_entry.action = LogAction::from(data[LOG_ENTRY_ACTION_OFFSET]);
 
         if data.len() == LOG_ENTRY_TARGET_OFFSET {
-            return Ok((log_entry, LOG_ENTRY_TARGET_OFFSET));
-        } else if data.len() == LOG_ENTRY_TARGET_OFFSET + 1 {
+            /* 00 00 00 00 00 00 00 00 -TS
+            * 00 - ACTION
+            * 00 - END = idx of LOG_ENTRY_TARGET_OFFSET
+            */
             return match data[LOG_ENTRY_TARGET_OFFSET] {
                 0x00 => Ok((log_entry, LOG_ENTRY_TARGET_OFFSET + 1)),
-                byteVal => Err(group_exceptions::GroupEntryProcessingError{
+                byte_val => Err(group_exceptions::GroupEntryProcessingError{
                     message: format!(
                         "Invalid log entry terminator byte. Expected: 0x00, got: {:#04x}",
-                        byteVal
+                        byte_val
                     ),
                 })
             }
@@ -130,7 +132,7 @@ impl LogEntry {
                 ),
             }),
             Ok((s, i)) => {
-                log_entry.target = s;
+                log_entry.desc = s;
                 idx = i;
             },
         };
