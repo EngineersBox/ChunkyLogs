@@ -143,7 +143,7 @@ impl Into<Vec<Byte>> for &LogEntry {
     fn into(self) -> Vec<Byte> {
         let mut bytes: Vec<Byte> = Vec::new();
 
-        let timestamp: u64 = self.timestamp.timestamp() as u64;
+        let timestamp: u64 = self.timestamp.timestamp_millis() as u64;
         bytes.append(timestamp.to_be_bytes().to_vec().as_mut());
 
         let action: Byte = self.action.into();

@@ -1,5 +1,6 @@
 use super::exceptions::chunk_exceptions;
 use std::convert::TryInto;
+use crate::Compressor;
 
 pub type Byte = u8;
 
@@ -70,8 +71,18 @@ impl Chunk {
         new_chunk.state = ChunkCompressionState::COMPRESSED;
         return Ok(new_chunk);
     }
-    pub fn to_bytes(&self) -> Vec<Byte> {
-        // TODO: Implement this
-        return vec!();
+    pub fn compress(&mut self) -> Result<(), chunk_exceptions::ChunkProcessingException> {
+        let mut compressor: Compressor = Compressor::new();
+        return match compressor.compress_vec(&self.data) {
+            Ok(compressed) => {
+                self.data = compressed;
+                self.length = self.data.len() as u32;
+                self.state = ChunkCompressionState::COMPRESSED;
+                return Ok(());
+            },
+            Err(e) => Err(chunk_exceptions::ChunkProcessingException{
+                message: e.message
+            }),
+        };
     }
 }

@@ -22,6 +22,7 @@ use crate::compression::compressor::{CompressionHandler, Compressor};
 use crate::logging::logging::initialize_logging;
 use crate::configuration::config::Config;
 use crate::data::chunk::chunk::{Chunk, Byte, ChunkCompressionState};
+use crate::data::chunk::exceptions::chunk_exceptions::ChunkProcessingException;
 use crate::data::group::log_entry::LogEntry;
 
 use crate::data::group::log_group::LogGroup;
@@ -39,7 +40,7 @@ fn main() {
     let log_target: &[Byte] = "test target".as_bytes();
     let mut entries: Vec<Byte> = Vec::new();
     for i in (0 as u64)..(10 as u64) {
-        let ts_bytes: [Byte; 8] = (i * 1000).to_be_bytes();
+        let ts_bytes: [Byte; 8] = ((i * 1000) as u64).to_be_bytes();
         for ts_byte in ts_bytes.iter() {
             entries.push(*ts_byte);
         }
@@ -78,7 +79,7 @@ fn main() {
                 $c.length,
                 $c.state,
                 $c.data.as_slice(),
-            );
+            )
         }
     }
 
@@ -131,6 +132,10 @@ fn main() {
     }
     chunk = log_group.into();
     print_chunk_data!(chunk);
+    match chunk.compress() {
+        Ok(_) => print_chunk_data!(chunk),
+        Err(e) => error!(&crate::LOGGER, "Error occurred: {}", e.message),
+    };
     std::thread::sleep(Duration::from_millis(1000));
 }
 
