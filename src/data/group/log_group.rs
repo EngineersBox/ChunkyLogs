@@ -6,7 +6,6 @@ use crate::data::group::exceptions::group_exceptions;
 use super::log_entry::LogEntry;
 
 const MAX_ENTRIES_PER_GROUP: usize = 1000;
-const MIN_LOG_ENTRY_SIZE: usize = 10; // Ex: "<8 bytes timestamp><1 byte action><n bytes target><n bytes message>\0x00"
 const DECOMPRESSED_DATA_OFFSET: usize = 8 + 8 + 4;
 
 pub struct LogGroup {
@@ -51,8 +50,9 @@ impl LogGroup {
         log_group.ts_to = epoch_to_datetime(chunk.ts_to);
 
         let mut idx: usize = DECOMPRESSED_DATA_OFFSET;
+        let mut entry_count: usize = 0;
         loop {
-            if idx == chunk.data.len() - 1 && chunk.data[idx] == 0x0 {
+            if (entry_count >= MAX_ENTRIES_PER_GROUP) || (idx == chunk.data.len() - 1 && chunk.data[idx] == 0x0) {
                 break;
             }
             match LogEntry::process_entry(&chunk.data.as_slice()[idx..]) {
@@ -64,6 +64,7 @@ impl LogGroup {
                     idx += i;
                 },
             };
+            entry_count += 1;
         }
         return Ok(log_group);
     }

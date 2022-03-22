@@ -35,7 +35,6 @@ impl Into<u8> for LogAction {
     }
 }
 
-const MAX_ENTRIES_PER_GROUP: usize = 1000;
 const MIN_LOG_ENTRY_SIZE: usize = 10; // Ex: "<8 bytes timestamp><1 byte action><n bytes target><n bytes message>\0x00"
 const LOG_ENTRY_TIMESTAMP_OFFSET: usize = 0;
 const LOG_ENTRY_ACTION_OFFSET: usize = LOG_ENTRY_TIMESTAMP_OFFSET + 8;
@@ -47,7 +46,7 @@ pub struct LogEntry {
     pub action: LogAction,
     pub target: String,
     pub desc: String,
-}
+} // Ex: "<8 bytes timestamp><1 byte action><n bytes target><n bytes message>\0x00"
 
 impl LogEntry {
     pub fn new() -> LogEntry {
