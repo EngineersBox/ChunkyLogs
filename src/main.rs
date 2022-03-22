@@ -14,6 +14,7 @@ extern crate lazy_static;
 extern crate regex;
 extern crate chrono;
 
+use std::time::Duration;
 use lazy_static::lazy_static;
 use slog::Logger;
 use crate::compression::compressor::{CompressionHandler, Compressor};
@@ -133,7 +134,7 @@ fn main() {
         }
         Err(e) => error!(&crate::LOGGER, "Error occurred: {}", e.message),
     }
-    std::thread::sleep_ms(1000);
+    std::thread::sleep(Duration::from_millis(1000));
 }
 
 /* ---- HEADER ----

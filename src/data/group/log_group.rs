@@ -22,7 +22,7 @@ impl LogGroup {
             entries: Vec::with_capacity(MAX_ENTRIES_PER_GROUP),
         }
     }
-    pub fn append_entry(&mut self, entry: &LogEntry) -> Result<(), group_exceptions::GroupEntryAppendError> {
+    pub fn append_entry(&mut self, entry: LogEntry) -> Result<(), group_exceptions::GroupEntryAppendError> {
         if self.entries.len() >= MAX_ENTRIES_PER_GROUP {
             return Err(group_exceptions::GroupEntryAppendError{
                 message: format!("Maximum number of entries reached {}", MAX_ENTRIES_PER_GROUP)
@@ -32,7 +32,7 @@ impl LogGroup {
             self.ts_from = entry.timestamp;
         }
         self.ts_to = entry.timestamp;
-        self.entries.push((*entry).clone());
+        self.entries.push(entry);
         return Ok(());
     }
     pub fn from_chunk(chunk: &Chunk) -> Result<LogGroup, group_exceptions::GroupChunkProcessingError> {
