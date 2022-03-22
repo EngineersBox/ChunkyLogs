@@ -1,5 +1,6 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
-use crate::data::chunk::chunk::{Chunk, ChunkCompressionState, Byte};
+use crate::Byte;
+use crate::data::chunk::chunk::{Chunk, ChunkCompressionState};
 use crate::data::datetime::datetime_utils::epoch_to_datetime;
 use crate::data::group::exceptions::group_exceptions;
 
@@ -55,7 +56,7 @@ impl LogGroup {
             if (entry_count >= MAX_ENTRIES_PER_GROUP) || (idx == chunk.data.len() - 1 && chunk.data[idx] == 0x0) {
                 break;
             }
-            match LogEntry::process_entry(&chunk.data.as_slice()[idx..]) {
+            match LogEntry::from_bytes(&chunk.data.as_slice()[idx..]) {
                 Err(e) => return Err(group_exceptions::GroupChunkProcessingError{
                     message: e.message,
                 }),
@@ -67,5 +68,21 @@ impl LogGroup {
             entry_count += 1;
         }
         return Ok(log_group);
+    }
+}
+
+impl Into<Chunk> for LogGroup {
+    fn into(self) -> Chunk {
+        let mut chunk: Chunk = Chunk::new();
+        chunk.ts_from = self.ts_from.timestamp() as u64;
+        chunk.ts_to = self.ts_to.timestamp() as u64;
+        chunk.data = self.entries.iter()
+            .map(|entry: &LogEntry| -> Vec<Byte> { entry.into() })
+            .flatten()
+            .collect::<Vec<Byte>>();
+        chunk.data.push(0x00);
+        chunk.length = chunk.data.len() as u32 + DECOMPRESSED_DATA_OFFSET as u32;
+        chunk.state = ChunkCompressionState::DECOMPRESSED;
+        return chunk;
     }
 }

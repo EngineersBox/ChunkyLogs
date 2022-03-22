@@ -21,7 +21,8 @@ use crate::compression::compressor::{CompressionHandler, Compressor};
 
 use crate::logging::logging::initialize_logging;
 use crate::configuration::config::Config;
-use crate::data::chunk::chunk::{Chunk, ChunkCompressionState};
+use crate::data::chunk::chunk::{Chunk, Byte, ChunkCompressionState};
+use crate::data::group::log_entry::LogEntry;
 
 use crate::data::group::log_group::LogGroup;
 
@@ -33,15 +34,16 @@ fn main() {
     info!(&crate::LOGGER, "Configured logging");
     let mut properties: Config = Config::new("config/config.properties");
     properties.read();
-    let log_entry: &[u8] = "test log entry or something".as_bytes();
-    let log_target: &[u8] = "test target".as_bytes();
-    let mut entries: Vec<u8> = Vec::new();
+
+    let log_entry: &[Byte] = "test log entry or something".as_bytes();
+    let log_target: &[Byte] = "test target".as_bytes();
+    let mut entries: Vec<Byte> = Vec::new();
     for i in (0 as u64)..(10 as u64) {
-        let ts_bytes: [u8; 8] = (i * 1000).to_be_bytes();
+        let ts_bytes: [Byte; 8] = (i * 1000).to_be_bytes();
         for ts_byte in ts_bytes.iter() {
             entries.push(*ts_byte);
         }
-        entries.push((((i % 4) + 4) % 4) as u8);
+        entries.push((((i % 4) + 4) % 4) as Byte);
         for target_byte in log_target.iter() {
             entries.push(*target_byte);
         }
@@ -52,7 +54,8 @@ fn main() {
         entries.push(0x00);
     }
     entries.push(0x00);
-    let mut bytes: Vec<u8> = vec!(
+
+    let mut bytes: Vec<Byte> = vec!(
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09,
     );
@@ -61,37 +64,30 @@ fn main() {
     }
     bytes.append(&mut entries);
 
-    // match Chunk::from_bytes(&bytes) {
-    //     Err(e) => {
-    //         error!(crate::LOGGER, "Error occurred: {}", e.message);
-    //     },
-    //     Ok(c) => info!(
-    //         crate::LOGGER,
-    //         "Chunk data: [TS from: {}] [TS to: {}] [Length: {}] [Data: {:02X?}]",
-    //         c.ts_from,
-    //         c.ts_to,
-    //         c.length,
-    //         c.data.as_slice()
-    //     ),
-    // };
     let mut chunk: Chunk = Chunk::new();
     chunk.ts_from = 0;
     chunk.ts_to = 9 * 1000;
     let mut compressor: Compressor = Compressor::new();
+    macro_rules! print_chunk_data {
+        ($c:expr) => {
+            info!(
+                &crate::LOGGER,
+                "Chunk data: [TS from: {}] [TS to: {}] [Length: {}] [State: {:?}] [Data: {:02X?}]",
+                $c.ts_from,
+                $c.ts_to,
+                $c.length,
+                $c.state,
+                $c.data.as_slice(),
+            );
+        }
+    }
+
     match compressor.compress_slice(&bytes) {
         Ok(compressed_data) => {
             chunk.data = compressed_data;
             chunk.length = chunk.data.len() as u32;
             chunk.state = ChunkCompressionState::COMPRESSED;
-            info!(
-                &crate::LOGGER,
-                "Chunk data: [TS from: {}] [TS to: {}] [Length: {}] [Data: {:02X?}] [State: {:?}]",
-                chunk.ts_from,
-                chunk.ts_to,
-                chunk.length,
-                chunk.data.as_slice(),
-                chunk.state,
-            );
+            print_chunk_data!(chunk);
         },
         Err(e) => error!(&crate::LOGGER, "Error occurred: {}", e.message),
     };
@@ -100,18 +96,12 @@ fn main() {
             chunk.data = decompressed_data;
             chunk.length = chunk.data.len() as u32;
             chunk.state = ChunkCompressionState::DECOMPRESSED;
-            info!(
-                &crate::LOGGER,
-                "Chunk data: [TS from: {}] [TS to: {}] [Length: {}] [Data: {:02X?}] [State: {:?}]",
-                chunk.ts_from,
-                chunk.ts_to,
-                chunk.length,
-                chunk.data.as_slice(),
-                chunk.state,
-            );
+            print_chunk_data!(chunk);
         },
         Err(e) => error!(&crate::LOGGER, "Error occurred: {}", e.message),
     };
+
+    let mut log_group: LogGroup = LogGroup::new();
     match LogGroup::from_chunk(&chunk) {
         Ok(group) => {
             info!(
@@ -121,19 +111,26 @@ fn main() {
                 group.ts_to,
                 group.entries.len(),
             );
-            for entry in group.entries.iter() {
-                info!(
-                    &crate::LOGGER,
-                    "Entry: [TS: {}] [Action: {:?}] [Target: {}] [Message: {}]",
-                    entry.timestamp,
-                    entry.action,
-                    entry.target,
-                    entry.desc
-                );
+            for i in 0..group.entries.len() {
+                let optional_entry: Option<&LogEntry> = group.entries.get(i);
+                if let Some(entry) = optional_entry {
+                    info!(
+                        &crate::LOGGER,
+                        "Entry {}: [TS: {}] [Action: {:?}] [Target: {}] [Message: {}]",
+                        i,
+                        entry.timestamp,
+                        entry.action,
+                        entry.target,
+                        entry.desc
+                    );
+                }
             }
+            log_group = group;
         }
         Err(e) => error!(&crate::LOGGER, "Error occurred: {}", e.message),
     }
+    chunk = log_group.into();
+    print_chunk_data!(chunk);
     std::thread::sleep(Duration::from_millis(1000));
 }
 

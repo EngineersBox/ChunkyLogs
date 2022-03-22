@@ -4,7 +4,7 @@ use crate::data::chunk::chunk::Byte;
 use crate::data::datetime::datetime_utils::epoch_to_datetime;
 use crate::data::group::exceptions::group_exceptions;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub enum LogAction {
     CREATE,
     UPDATE,
@@ -74,7 +74,7 @@ impl LogEntry {
             Ok(s) => Ok((s, idx)),
         };
     }
-    pub(crate) fn process_entry(data: &[Byte]) -> Result<(LogEntry, usize), group_exceptions::GroupEntryProcessingError> {
+    pub fn from_bytes(data: &[Byte]) -> Result<(LogEntry, usize), group_exceptions::GroupEntryProcessingError> {
         if data.len() < MIN_LOG_ENTRY_SIZE {
             return Err(group_exceptions::GroupEntryProcessingError{
                 message: format!(
@@ -136,5 +136,28 @@ impl LogEntry {
             },
         };
         return Ok((log_entry, idx));
+    }
+}
+
+impl Into<Vec<Byte>> for &LogEntry {
+    fn into(self) -> Vec<Byte> {
+        let mut bytes: Vec<Byte> = Vec::new();
+
+        let timestamp: u64 = self.timestamp.timestamp() as u64;
+        bytes.append(timestamp.to_be_bytes().to_vec().as_mut());
+
+        let action: Byte = self.action.into();
+        bytes.append(action.to_be_bytes().to_vec().as_mut());
+
+        if self.target.len() > 0 {
+            bytes.append(self.target.as_bytes().to_vec().as_mut());
+            bytes.push(0x00);
+        }
+
+        if self.desc.len() > 0 {
+            bytes.append(self.desc.as_bytes().to_vec().as_mut());
+            bytes.push(0x00);
+        }
+        return bytes;
     }
 }
