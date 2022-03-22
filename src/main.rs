@@ -21,7 +21,7 @@ use crate::compression::compressor::{CompressionHandler, Compressor};
 use crate::logging::logging::initialize_logging;
 use crate::configuration::config::Config;
 use crate::data::chunk::chunk::{Chunk, ChunkCompressionState};
-use crate::data::group::exceptions::group_exceptions::GroupChunkProcessingError;
+
 use crate::data::group::log_group::LogGroup;
 
 lazy_static! {
@@ -53,7 +53,7 @@ fn main() {
     entries.push(0x00);
     let mut bytes: Vec<u8> = vec!(
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09,
     );
     for entries_len_bytes in (entries.len() as u32).to_be_bytes().iter() {
         bytes.push(*entries_len_bytes);
@@ -75,7 +75,7 @@ fn main() {
     // };
     let mut chunk: Chunk = Chunk::new();
     chunk.ts_from = 0;
-    chunk.ts_to = 1;
+    chunk.ts_to = 9 * 1000;
     let mut compressor: Compressor = Compressor::new();
     match compressor.compress_slice(&bytes) {
         Ok(compressed_data) => {
@@ -124,7 +124,7 @@ fn main() {
                 info!(
                     &crate::LOGGER,
                     "Entry: [TS: {}] [Action: {:?}] [Target: {}] [Message: {}]",
-                    entry.timestamp.to_rfc2822(),
+                    entry.timestamp,
                     entry.action,
                     entry.target,
                     entry.desc
