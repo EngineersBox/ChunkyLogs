@@ -153,5 +153,5 @@ pub fn initialize_logging(prefix: String) ->  Logger {
     let log: Logger = Logger::root(both, o!());
 
     info!(log.new(get_current_thread_id!()), "{}", directory_creation_message);
-    log
+    return log;
 }

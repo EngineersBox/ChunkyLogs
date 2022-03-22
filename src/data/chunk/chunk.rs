@@ -3,7 +3,7 @@ use std::convert::TryInto;
 
 pub type Byte = u8;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum ChunkCompressionState {
     COMPRESSED,
     DECOMPRESSED,
@@ -18,9 +18,9 @@ pub struct Chunk {
 }
 
 const FROM_TIMESTAMP_OFFSET: usize = 0;
-const TO_TIMESTAMP_OFFSET: usize = FROM_TIMESTAMP_OFFSET + 64;
-const DATA_LENGTH_OFFSET: usize = TO_TIMESTAMP_OFFSET + 64;
-const COMPRESSED_DATA_OFFSET: usize = DATA_LENGTH_OFFSET + 32;
+const TO_TIMESTAMP_OFFSET: usize = FROM_TIMESTAMP_OFFSET + 8;
+const DATA_LENGTH_OFFSET: usize = TO_TIMESTAMP_OFFSET + 8;
+const COMPRESSED_DATA_OFFSET: usize = DATA_LENGTH_OFFSET + 4;
 
 impl Chunk {
     pub fn new() -> Chunk {
@@ -46,15 +46,15 @@ impl Chunk {
 
         let mut ts_from_bytes: [Byte; 8] = [0; 8];
         ts_from_bytes.copy_from_slice(&bytes_slice[FROM_TIMESTAMP_OFFSET..TO_TIMESTAMP_OFFSET]);
-        new_chunk.ts_from = u64::from_ne_bytes(ts_from_bytes);
+        new_chunk.ts_from = u64::from_be_bytes(ts_from_bytes);
 
         let mut ts_to_bytes: [Byte; 8] = [0; 8];
         ts_to_bytes.copy_from_slice(&bytes_slice[TO_TIMESTAMP_OFFSET..DATA_LENGTH_OFFSET]);
-        new_chunk.ts_to = u64::from_ne_bytes(ts_to_bytes);
+        new_chunk.ts_to = u64::from_be_bytes(ts_to_bytes);
 
         let mut length_bytes: [Byte; 4] = [0; 4];
         length_bytes.copy_from_slice(&bytes_slice[DATA_LENGTH_OFFSET..COMPRESSED_DATA_OFFSET]);
-        new_chunk.length = u32::from_ne_bytes(length_bytes);
+        new_chunk.length = u32::from_be_bytes(length_bytes);
 
         let compress_data_actual_length: u32 = (bytes.len() - COMPRESSED_DATA_OFFSET).try_into().unwrap();
         if new_chunk.length != compress_data_actual_length {

@@ -1,4 +1,5 @@
 use std::io::{Read, Write};
+use flate2::bufread::ZlibDecoder;
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
 use flate2::read::GzDecoder;
@@ -43,7 +44,7 @@ impl CompressionHandler for Compressor {
     }
     fn decompress_slice(&mut self, data: &[Byte]) -> Result<Vec<Byte>, compressor_exceptions::DecompressionError> {
         self.action = CompressionAction::DECOMPRESS;
-        let mut decoder: GzDecoder<&[Byte]> = GzDecoder::new(data);
+        let mut decoder: ZlibDecoder<&[Byte]> = ZlibDecoder::new(data);
         let mut buffer: String = String::new();
         return match decoder.read_to_string(&mut buffer) {
             Err(e) => Err(compressor_exceptions::DecompressionError{

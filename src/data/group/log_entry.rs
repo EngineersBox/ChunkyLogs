@@ -89,7 +89,7 @@ impl LogEntry {
 
         let mut timestamp_bytes: [Byte; 8] = [0; 8];
         timestamp_bytes.copy_from_slice(&data[LOG_ENTRY_TIMESTAMP_OFFSET..LOG_ENTRY_ACTION_OFFSET]);
-        log_entry.timestamp = epoch_to_datetime(u64::from_ne_bytes(timestamp_bytes));
+        log_entry.timestamp = epoch_to_datetime(u64::from_be_bytes(timestamp_bytes));
 
         log_entry.action = LogAction::from(data[LOG_ENTRY_ACTION_OFFSET]);
 
