@@ -6,7 +6,7 @@ use crate::data::group::exceptions::group_exceptions;
 use super::log_entry::LogEntry;
 
 const MAX_ENTRIES_PER_GROUP: usize = 1000;
-const DECOMPRESSED_DATA_OFFSET: usize = 8 + 8 + 4;
+const DECOMPRESSED_DATA_OFFSET: usize = 8 + 8 + 4; // <8 bytes timestamp from><8 bytes timestamp to><4 bytes data length>
 
 pub struct LogGroup {
     pub ts_from: DateTime<Utc>,
@@ -22,7 +22,7 @@ impl LogGroup {
             entries: Vec::with_capacity(MAX_ENTRIES_PER_GROUP),
         }
     }
-    pub fn append_entry(&mut self, entry: LogEntry) -> Result<(), group_exceptions::GroupEntryAppendError> {
+    pub fn append_entry(&mut self, entry: LogEntry) -> Result<usize, group_exceptions::GroupEntryAppendError> {
         if self.entries.len() >= MAX_ENTRIES_PER_GROUP {
             return Err(group_exceptions::GroupEntryAppendError{
                 message: format!("Maximum number of entries reached {}", MAX_ENTRIES_PER_GROUP)
@@ -33,7 +33,7 @@ impl LogGroup {
         }
         self.ts_to = entry.timestamp;
         self.entries.push(entry);
-        return Ok(());
+        return Ok(self.entries.len() - 1);
     }
     pub fn from_chunk(chunk: &Chunk) -> Result<LogGroup, group_exceptions::GroupChunkProcessingError> {
         if chunk.state == ChunkCompressionState::COMPRESSED {
