@@ -76,12 +76,18 @@ impl Into<Chunk> for LogGroup {
         let mut chunk: Chunk = Chunk::new();
         chunk.ts_from = self.ts_from.timestamp() as u64;
         chunk.ts_to = self.ts_to.timestamp() as u64;
-        chunk.data = self.entries.iter()
+        chunk.data = Vec::new();
+        chunk.data.append(chunk.ts_from.to_be_bytes().to_vec().as_mut());
+        chunk.data.append(chunk.ts_to.to_be_bytes().to_vec().as_mut());
+        let mut decompressed_data: Vec<Byte> = self.entries.iter()
             .map(|entry: &LogEntry| -> Vec<Byte> { entry.into() })
             .flatten()
             .collect::<Vec<Byte>>();
-        chunk.data.push(0x00);
-        chunk.length = chunk.data.len() as u32 + DECOMPRESSED_DATA_OFFSET as u32;
+        decompressed_data.push(0x00);
+        let data_length: u32 = decompressed_data.len() as u32;
+        chunk.data.append(data_length.to_be_bytes().to_vec().as_mut());
+        chunk.data.append(decompressed_data.as_mut());
+        chunk.length = chunk.data.len() as u32;
         chunk.state = ChunkCompressionState::DECOMPRESSED;
         return chunk;
     }
