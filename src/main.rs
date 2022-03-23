@@ -13,6 +13,7 @@ extern crate slog_json;
 extern crate lazy_static;
 extern crate regex;
 extern crate chrono;
+extern crate core;
 
 use std::time::Duration;
 use lazy_static::lazy_static;
