@@ -1,10 +1,8 @@
 use std::fs::File;
 use std::io;
-use std::io::{BufReader, IoSliceMut, Read};
+use std::io::{BufReader, Read};
 use std::path::Path;
 use crate::{Byte, Chunk, LogGroup};
-use crate::data::bytes::reader_utils::read_bytes_handled;
-use crate::data::chunk::exceptions::chunk_exceptions::ChunkProcessingException;
 use crate::data::store::exceptions::store_exceptions;
 
 enum LogStoreImportState {
@@ -63,7 +61,7 @@ impl LogStore {
             }),
         };
     }
-    pub fn convert_bytes_to_chunks(&mut self, file: &File) -> Result<(), store_exceptions::StoreConvertError> {
+    fn convert_bytes_to_chunks(&mut self, file: &File) -> Result<(), store_exceptions::StoreConvertError> {
         let mut buf: BufReader<&File> = BufReader::new(file);
         let mut header: [Byte; LOG_STORE_DATA_OFFSET] = [0; LOG_STORE_DATA_OFFSET];
         // Read header
