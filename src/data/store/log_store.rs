@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io;
 use std::io::{BufReader, Read};
 use std::path::Path;
-use crate::{Byte, Chunk, LogGroup};
+use crate::{Byte, Chunk, LogEntry, LogGroup};
 use crate::data::store::exceptions::store_exceptions;
 
 enum LogStoreImportState {
@@ -106,5 +106,24 @@ impl LogStore {
         };
 
         return Ok(());
+    }
+    pub fn search_by_timestamp(&self, timestamp: u64) -> Result<Chunk, store_exceptions::StoreConvertError> {
+        /* Implement this to search in self.current_chunk first and
+         * then binary search the chunk headers in the filepath,
+         * when one is found in range, deserialize it and return.
+         * Otherwise return an error.
+         */
+        let chunk: Chunk = Chunk::new();
+        return Ok(chunk);
+    }
+    pub fn deep_search_by_timestamp(&self, timestamp: u64) -> Result<LogEntry, store_exceptions::StoreConvertError> {
+        /* Implement this to search in self.current_chunk first and
+         * then binary search the chunk headers in the filepath,
+         * when one is found in range, deserialize it and then
+         * binary search the log entries, when the matching one
+         * is found, return it. Otherwise return an error.
+         */
+        let log_entry: LogEntry = LogEntry::new();
+        return Ok(log_entry);
     }
 }
