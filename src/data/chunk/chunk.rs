@@ -85,4 +85,10 @@ impl Chunk {
             }),
         };
     }
+    pub fn to_be_bytes(&self) -> Result<Vec<Byte>, chunk_exceptions::ChunkProcessingException> {
+        todo!("Implement Chunk::to_be_bytes()")
+    }
+    pub fn to_le_bytes(&self) -> Result<Vec<Byte>, chunk_exceptions::ChunkProcessingException> {
+        todo!("Implement Chunk::to_le_bytes()")
+    }
 }

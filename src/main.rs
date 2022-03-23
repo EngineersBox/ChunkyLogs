@@ -17,14 +17,12 @@ extern crate chrono;
 use std::time::Duration;
 use lazy_static::lazy_static;
 use slog::Logger;
-use crate::compression::compressor::{CompressionHandler, Compressor};
 
+use crate::compression::compressor::{CompressionHandler, Compressor};
 use crate::logging::logging::initialize_logging;
 use crate::configuration::config::Config;
 use crate::data::chunk::chunk::{Chunk, Byte, ChunkCompressionState};
-use crate::data::chunk::exceptions::chunk_exceptions::ChunkProcessingException;
 use crate::data::group::log_entry::LogEntry;
-
 use crate::data::group::log_group::LogGroup;
 
 lazy_static! {
