@@ -1,7 +1,7 @@
 use super::exceptions::chunk_exceptions;
 use std::convert::TryInto;
 use std::fs::File;
-use std::io::{BufReader, IoSliceMut, Read, Seek};
+use std::io::{BufReader, IoSliceMut, Read, Seek, Take};
 use crate::Compressor;
 
 pub type Byte = u8;
@@ -71,14 +71,15 @@ impl Chunk {
         new_chunk.length = u32::from_be_bytes(length_bytes);
 
         // Read data
-        let mut data: Vec<IoSliceMut> = Vec::with_capacity(new_chunk.length as usize);
-        match bytes.read_vectored(&mut data) {
+        let mut bytes_handle: Take<&mut BufReader<&File>> = bytes.take(new_chunk.length as u64);
+        let mut data: Vec<Byte> = Vec::with_capacity(new_chunk.length as usize);
+        match bytes_handle.read_to_end(&mut data) {
             Ok(n) => {
-                if n != COMPRESSED_DATA_OFFSET {
+                if n != new_chunk.length as usize {
                     return Err(chunk_exceptions::ChunkProcessingException{
                         message: format!(
                             "Expected to read {} bytes for data, got {} bytes",
-                            COMPRESSED_DATA_OFFSET,
+                            new_chunk.length,
                             n,
                         ),
                     })
@@ -90,23 +91,7 @@ impl Chunk {
         };
 
         // Process data
-        let mut data_bytes: Vec<Byte> = Vec::new();
-        for byte_slice in data.iter() {
-            for byte_item in byte_slice.iter() {
-                data_bytes.push(*byte_item);
-            }
-        }
-        let compress_data_actual_length: u32 = (data_bytes.len() - COMPRESSED_DATA_OFFSET) as u32;
-        if new_chunk.length != compress_data_actual_length {
-            return Err(chunk_exceptions::ChunkProcessingException{
-                message: format!(
-                    "Compressed data was of length {}, expected {}",
-                    compress_data_actual_length,
-                    new_chunk.length
-                ),
-            });
-        }
-        new_chunk.data = data_bytes;
+        new_chunk.data = data;
         new_chunk.state = ChunkCompressionState::COMPRESSED;
 
         return Ok(new_chunk);

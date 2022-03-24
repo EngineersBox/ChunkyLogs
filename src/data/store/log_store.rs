@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Seek};
 use std::path::Path;
 use crate::{Byte, Chunk, LogEntry, LogGroup};
 use crate::data::store::exceptions::store_exceptions;
@@ -96,14 +96,15 @@ impl LogStore {
                 message: e.to_string(),
             }),
         };
-        match Chunk::from_bytes_buffer(&mut buf) {
-            Ok(chunk) => self.current_chunk = chunk,
-            Err(e) => return Err(store_exceptions::StoreConvertError{
+        return match Chunk::from_bytes_buffer(&mut buf) {
+            Ok(chunk) => {
+                self.current_chunk = chunk;
+                return Ok(());
+            },
+            Err(e) => Err(store_exceptions::StoreConvertError{
                 message: e.to_string(),
             }),
         };
-
-        return Ok(());
     }
     pub fn search_by_timestamp(&self, timestamp: u64) -> Result<Chunk, store_exceptions::StoreConvertError> {
         /* Implement this to search in self.current_chunk first and

@@ -15,17 +15,14 @@ extern crate regex;
 extern crate chrono;
 extern crate core;
 
-use std::fs::File;
-use std::io;
-use std::io::Write;
 use std::time::Duration;
 use lazy_static::lazy_static;
 use slog::Logger;
 
-use crate::compression::compressor::{CompressionHandler, Compressor};
+use crate::compression::compressor::Compressor;
 use crate::logging::logging::initialize_logging;
 use crate::configuration::config::Config;
-use crate::data::chunk::chunk::{Chunk, Byte, ChunkCompressionState};
+use crate::data::chunk::chunk::{Chunk, Byte};
 use crate::data::group::log_entry::LogEntry;
 use crate::data::group::log_group::LogGroup;
 use crate::data::store::log_store::LogStore;
