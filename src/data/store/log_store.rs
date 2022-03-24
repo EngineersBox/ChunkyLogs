@@ -24,8 +24,8 @@ pub struct LogStore {
 }
 
 impl LogStore {
-    pub fn with_filepath(&self, filepath: &str) -> LogStore {
-        let mut store: LogStore = LogStore{
+    pub fn with_filepath(filepath: &str) -> LogStore {
+        return LogStore{
             filepath: filepath.parse().unwrap(),
             state: LogStoreImportState::FRESH,
             length: 0,
@@ -33,8 +33,6 @@ impl LogStore {
             current_chunk: Chunk::new(),
             current_log_group: LogGroup::new(),
         };
-
-        return store;
     }
     pub fn import_latest(&mut self) -> Result<(), store_exceptions::StoreImportError> {
         let path: &Path = Path::new(&self.filepath);

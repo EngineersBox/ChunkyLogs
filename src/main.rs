@@ -15,6 +15,9 @@ extern crate regex;
 extern crate chrono;
 extern crate core;
 
+use std::fs::File;
+use std::io;
+use std::io::Write;
 use std::time::Duration;
 use lazy_static::lazy_static;
 use slog::Logger;
@@ -25,6 +28,7 @@ use crate::configuration::config::Config;
 use crate::data::chunk::chunk::{Chunk, Byte, ChunkCompressionState};
 use crate::data::group::log_entry::LogEntry;
 use crate::data::group::log_group::LogGroup;
+use crate::data::store::log_store::LogStore;
 
 lazy_static! {
     static ref LOGGER: Logger = initialize_logging(String::from("chunky_logs_"));
@@ -55,19 +59,25 @@ fn main() {
     }
     entries.push(0x00);
 
-    let mut bytes: Vec<Byte> = vec!(
+    let mut chunk_bytes: Vec<Byte> = vec!(
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09,
     );
-    for entries_len_bytes in (entries.len() as u32).to_be_bytes().iter() {
-        bytes.push(*entries_len_bytes);
-    }
-    bytes.append(&mut entries);
 
-    let mut chunk: Chunk = Chunk::new();
-    chunk.ts_from = 0;
-    chunk.ts_to = 9 * 1000;
     let mut compressor: Compressor = Compressor::new();
+    match compressor.compress_vec(&entries) {
+        Ok(b) => entries = b,
+        Err(e) => {
+            error!(crate::LOGGER, "An error occurred: {}", e.message);
+            return;
+        }
+    }
+
+    for entries_len_bytes in (entries.len() as u32).to_be_bytes().iter() {
+        chunk_bytes.push(*entries_len_bytes);
+    }
+    chunk_bytes.append(&mut entries);
+
     macro_rules! print_chunk_data {
         ($c:expr) => {
             info!(
@@ -82,59 +92,42 @@ fn main() {
         }
     }
 
-    match compressor.compress_slice(&bytes) {
-        Ok(compressed_data) => {
-            chunk.data = compressed_data;
-            chunk.length = chunk.data.len() as u32;
-            chunk.state = ChunkCompressionState::COMPRESSED;
-            print_chunk_data!(chunk);
-        },
-        Err(e) => error!(&crate::LOGGER, "Error occurred: {}", e.message),
-    };
-    match compressor.decompress_slice(&chunk.data.as_slice()) {
-        Ok(decompressed_data) => {
-            chunk.data = decompressed_data;
-            chunk.length = chunk.data.len() as u32;
-            chunk.state = ChunkCompressionState::DECOMPRESSED;
-            print_chunk_data!(chunk);
-        },
-        Err(e) => error!(&crate::LOGGER, "Error occurred: {}", e.message),
-    };
+    let mut bytes: Vec<Byte> = Vec::new();
+    let length_bytes: [Byte; 8] = ((chunk_bytes.len() * 2) as u64).to_be_bytes();
+    bytes.append(length_bytes.to_vec().as_mut());
 
-    let mut log_group: LogGroup = LogGroup::new();
-    match LogGroup::from_chunk(&chunk) {
-        Ok(group) => {
-            info!(
-                &crate::LOGGER,
-                "Log group: [TS from: {}] [TS to: {}] [Entry Count: {}]",
-                group.ts_from,
-                group.ts_to,
-                group.entries.len(),
-            );
-            for i in 0..group.entries.len() {
-                let optional_entry: Option<&LogEntry> = group.entries.get(i);
-                if let Some(entry) = optional_entry {
-                    info!(
-                        &crate::LOGGER,
-                        "Entry {}: [TS: {}] [Action: {:?}] [Target: {}] [Message: {}]",
-                        i,
-                        entry.timestamp,
-                        entry.action,
-                        entry.target,
-                        entry.desc
-                    );
-                }
-            }
-            log_group = group;
+    let offset_bytes: [Byte; 8] = (chunk_bytes.len() as u64).to_be_bytes();
+    bytes.append(offset_bytes.to_vec().as_mut());
+
+    bytes.append(chunk_bytes.to_vec().as_mut());
+    bytes.append(chunk_bytes.to_vec().as_mut());
+
+    // let mut file: io::Result<File> = File::create("E:/ChunkyLogs/log_chunks.bin");
+    // if file.is_ok() {
+    //     match file.unwrap().write_all(bytes.as_slice()) {
+    //         Ok(_) => {},
+    //         Err(e) => {
+    //             error!(crate::LOGGER, "An error occurred: {}", e.to_string());
+    //             return;
+    //         }
+    //     }
+    // }
+
+    let mut store: LogStore = LogStore::with_filepath("log_chunks.bin");
+    match store.import_latest() {
+        Ok(()) => {},
+        Err(e) => {
+            error!(crate::LOGGER, "An error occurred: {}", e.message);
+            return;
         }
-        Err(e) => error!(&crate::LOGGER, "Error occurred: {}", e.message),
     }
-    chunk = log_group.into();
-    print_chunk_data!(chunk);
-    match chunk.compress() {
-        Ok(_) => print_chunk_data!(chunk),
-        Err(e) => error!(&crate::LOGGER, "Error occurred: {}", e.message),
-    };
+    info!(
+        crate::LOGGER,
+        "Log store [Length: {}] [Current Offset: {}]",
+        store.length,
+        store.current_chunk_offset,
+    );
+    print_chunk_data!(store.current_chunk);
     std::thread::sleep(Duration::from_millis(1000));
 }
 
@@ -142,7 +135,9 @@ fn main() {
 * ==== HEADER ====
 * 00, 00, 00, 00, 00, 00, 01, FF,
 * 00, 00, 00, 00, 00, 00, 00, 00,
-* ==== CHUNK ====
+* ==== CHUNK 0 ====
+* ...
+* ==== CHUNK 1 ====
 * ---- CHUNK HEADER ----
 * 00, 00, 00, 00, 00, 00, 00, 00,
 * 00, 00, 00, 00, 00, 00, 00, 01,
@@ -201,3 +196,4 @@ fn main() {
 * 00
 * ---- END ----
 */
+
