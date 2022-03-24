@@ -4,6 +4,7 @@ mod cache;
 mod logging;
 mod configuration;
 mod macros;
+mod encoding;
 
 #[macro_use]
 extern crate slog;
