@@ -1,7 +1,5 @@
-pub trait Encoder<T> {
-    fn encode(&self, raw: &T) -> Vec<u8>;
-}
+use super::exceptions::encoding_exceptions;
 
-pub trait TransmuteEncoder<T,E> {
-    fn encode(&self, from: &T) -> E;
+pub trait Encoder {
+    fn encode(&self) -> Result<Vec<u8>, encoding_exceptions::EncoderError>;
 }

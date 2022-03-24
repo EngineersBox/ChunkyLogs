@@ -1,7 +1,5 @@
-pub trait Decoder<T> {
-    fn decode(&self, raw: &Vec<u8>) -> T;
-}
+use super::exceptions::encoding_exceptions;
 
-pub trait TransmuteDecoder<T,E> {
-    fn decode(&self, from: &T) -> E;
+pub trait Decoder {
+    fn decode(&mut self, raw: &Vec<u8>) -> Result<(), encoding_exceptions::DecoderError>;
 }
