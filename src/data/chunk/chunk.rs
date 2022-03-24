@@ -135,12 +135,32 @@ impl Chunk {
         return Ok(new_chunk);
     }
     pub fn compress(&mut self) -> Result<(), chunk_exceptions::ChunkProcessingException> {
+        if self.state == ChunkCompressionState::COMPRESSED {
+            return Ok(());
+        }
         let mut compressor: Compressor = Compressor::new();
         return match compressor.compress_vec(&self.data) {
             Ok(compressed) => {
                 self.data = compressed;
                 self.length = self.data.len() as u32;
                 self.state = ChunkCompressionState::COMPRESSED;
+                return Ok(());
+            },
+            Err(e) => Err(chunk_exceptions::ChunkProcessingException{
+                message: e.message
+            }),
+        };
+    }
+    pub fn decompress(&mut self) -> Result<(), chunk_exceptions::ChunkProcessingException> {
+        if self.state == ChunkCompressionState::DECOMPRESSED {
+            return Ok(());
+        }
+        let mut compressor: Compressor = Compressor::new();
+        return match compressor.decompress_vec(&self.data) {
+            Ok(compressed) => {
+                self.data = compressed;
+                self.length = self.data.len() as u32;
+                self.state = ChunkCompressionState::DECOMPRESSED;
                 return Ok(());
             },
             Err(e) => Err(chunk_exceptions::ChunkProcessingException{

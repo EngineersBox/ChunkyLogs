@@ -15,6 +15,9 @@ extern crate regex;
 extern crate chrono;
 extern crate core;
 
+use std::fs::File;
+use std::io;
+use std::io::Write;
 use std::time::Duration;
 use lazy_static::lazy_static;
 use slog::Logger;
@@ -31,11 +34,21 @@ lazy_static! {
     static ref LOGGER: Logger = initialize_logging(String::from("chunky_logs_"));
 }
 
-fn main() {
-    info!(&crate::LOGGER, "Configured logging");
-    let mut properties: Config = Config::new("config/config.properties");
-    properties.read();
+macro_rules! print_chunk_data {
+    ($c:expr) => {
+        info!(
+            &crate::LOGGER,
+            "Chunk data: [TS from: {}] [TS to: {}] [Length: {}] [State: {:?}] [Data: {:02X?}]",
+            $c.ts_from,
+            $c.ts_to,
+            $c.length,
+            $c.state,
+            $c.data.as_slice(),
+        )
+    }
+}
 
+fn write_test_file() {
     let log_entry: &[Byte] = "test log entry or something".as_bytes();
     let log_target: &[Byte] = "test target".as_bytes();
     let mut entries: Vec<Byte> = Vec::new();
@@ -75,20 +88,6 @@ fn main() {
     }
     chunk_bytes.append(&mut entries);
 
-    macro_rules! print_chunk_data {
-        ($c:expr) => {
-            info!(
-                &crate::LOGGER,
-                "Chunk data: [TS from: {}] [TS to: {}] [Length: {}] [State: {:?}] [Data: {:02X?}]",
-                $c.ts_from,
-                $c.ts_to,
-                $c.length,
-                $c.state,
-                $c.data.as_slice(),
-            )
-        }
-    }
-
     let mut bytes: Vec<Byte> = Vec::new();
     let length_bytes: [Byte; 8] = ((chunk_bytes.len() * 2) as u64).to_be_bytes();
     bytes.append(length_bytes.to_vec().as_mut());
@@ -99,16 +98,22 @@ fn main() {
     bytes.append(chunk_bytes.to_vec().as_mut());
     bytes.append(chunk_bytes.to_vec().as_mut());
 
-    // let mut file: io::Result<File> = File::create("E:/ChunkyLogs/log_chunks.bin");
-    // if file.is_ok() {
-    //     match file.unwrap().write_all(bytes.as_slice()) {
-    //         Ok(_) => {},
-    //         Err(e) => {
-    //             error!(crate::LOGGER, "An error occurred: {}", e.to_string());
-    //             return;
-    //         }
-    //     }
-    // }
+    let mut file: io::Result<File> = File::create("E:/ChunkyLogs/log_chunks.bin");
+    if file.is_ok() {
+        match file.unwrap().write_all(bytes.as_slice()) {
+            Ok(_) => {},
+            Err(e) => {
+                error!(crate::LOGGER, "An error occurred: {}", e.to_string());
+                return;
+            }
+        }
+    }
+}
+
+fn main() {
+    info!(&crate::LOGGER, "Configured logging");
+    let mut properties: Config = Config::new("config/config.properties");
+    properties.read();
 
     let mut store: LogStore = LogStore::with_filepath("log_chunks.bin");
     match store.import_latest() {

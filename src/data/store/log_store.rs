@@ -49,11 +49,14 @@ impl LogStore {
                 ),
             });
         }
-        return match self.convert_bytes_to_chunks(&file_result.unwrap()) {
-            Ok(_) => {
-                self.state = LogStoreImportState::LOADED;
-                return Ok(());
-            },
+        match self.convert_bytes_to_chunks(&file_result.unwrap()) {
+            Ok(_) => self.state = LogStoreImportState::LOADED,
+            Err(e) => return Err(store_exceptions::StoreImportError{
+                message: e.message,
+            }),
+        };
+        return match self.current_chunk.decompress() {
+            Ok(()) => Ok(()),
             Err(e) => Err(store_exceptions::StoreImportError{
                 message: e.message,
             }),
