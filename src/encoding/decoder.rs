@@ -1,5 +1,5 @@
-use super::exceptions::encoding_exceptions;
+use crate::encoding::errors::encoding_errors;
 
 pub trait Decoder {
-    fn decode(raw: &Vec<u8>) -> Result<Box<Self>, encoding_exceptions::DecoderError>;
+    fn decode(from: &Vec<u8>) -> Result<Box<Self>, encoding_errors::DecoderError<Vec<u8>>>;
 }

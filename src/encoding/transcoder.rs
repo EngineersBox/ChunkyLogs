@@ -1,5 +1,5 @@
-use super::exceptions::encoding_exceptions;
+use crate::encoding::errors::encoding_errors;
 
 pub trait Transcoder<T> {
-    fn transcode(&self) -> Result<T, encoding_exceptions::TranscoderError>;
+    fn transcode(&self) -> Result<Box<T>, encoding_errors::TranscoderError<T>>;
 }
