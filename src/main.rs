@@ -5,6 +5,7 @@ mod logging;
 mod configuration;
 mod macros;
 mod encoding;
+mod compiler;
 
 #[macro_use]
 extern crate slog;
@@ -26,10 +27,8 @@ use slog::Logger;
 use crate::compression::compressor::Compressor;
 use crate::logging::logging::initialize_logging;
 use crate::configuration::config::Config;
-use crate::data::chunk::chunk::{Chunk, Byte};
-use crate::data::group::log_entry::LogEntry;
-use crate::data::group::log_group::LogGroup;
-use crate::data::store::log_store::LogStore;
+
+type Byte = u8;
 
 lazy_static! {
     static ref LOGGER: Logger = initialize_logging(String::from("chunky_logs_"));
@@ -116,21 +115,6 @@ fn main() {
     let mut properties: Config = Config::new("config/config.properties");
     properties.read();
 
-    let mut store: LogStore = LogStore::with_filepath("log_chunks.bin");
-    match store.import_latest() {
-        Ok(()) => {},
-        Err(e) => {
-            error!(crate::LOGGER, "An error occurred: {}", e.message);
-            return;
-        }
-    }
-    info!(
-        crate::LOGGER,
-        "Log store [Length: {}] [Current Offset: {}]",
-        store.length,
-        store.current_chunk_offset,
-    );
-    print_chunk_data!(store.current_chunk);
     std::thread::sleep(Duration::from_millis(1000));
 }
 

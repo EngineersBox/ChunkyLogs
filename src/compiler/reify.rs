@@ -7,6 +7,7 @@ macro_rules! reify{
             $($field_vis_spec $field_name: $field_type,)*
         }
         impl $name {
+            #[allow(dead_code)]
             pub fn get_field_attribute_map() -> std::collections::HashMap<String, String> {
                 return core::convert::From::from([
                     $((
@@ -15,6 +16,7 @@ macro_rules! reify{
                     ),)*
                 ]);
             }
+            #[allow(dead_code)]
             pub fn get_field_attribute(field_name_prm: &str) -> Result<String, crate::compiler::errors::proc_macro_errors::StructFieldNotFoundError> {
                 let fields: Vec<String> = vec![$(stringify!($field_name,$($field_attribute)?).replace(" ", "")),*];
                 let mut field_attr: String = "@@FNF@@".to_string();
@@ -32,6 +34,7 @@ macro_rules! reify{
                 }
                 return Ok(field_attr);
             }
+            #[allow(dead_code)]
             pub fn get_field_attribute_typed<T: std::str::FromStr>(field_name_prm: &str) -> Result<T, crate::compiler::errors::proc_macro_errors::TypedAttributeRetrievalError> {
                 let attr: String = match $name::get_field_attribute(field_name_prm) {
                     Ok(v) => v,
@@ -41,11 +44,12 @@ macro_rules! reify{
                 };
                 return match attr.parse::<T>() {
                     Ok(v) => Ok(v),
-                    Err(e) => Err(crate::compiler::errors::proc_macro_errors::TypedAttributeRetrievalError{
+                    Err(_) => Err(crate::compiler::errors::proc_macro_errors::TypedAttributeRetrievalError{
                         message: attr.to_string(),
                     }),
                 }
             }
+            #[allow(dead_code)]
             pub fn get_field(&self, field_name_prm: &str) -> Result<Box<&dyn std::any::Any>, crate::compiler::errors::proc_macro_errors::StructFieldNotFoundError> {
                 return match field_name_prm {
                     $(stringify!($field_name) => Ok(Box::new(&self.$field_name)),)*
@@ -55,6 +59,7 @@ macro_rules! reify{
                     }),
                 }
             }
+            #[allow(dead_code)]
             pub fn get_field_typed<T: 'static>(&self, field_name_prm: &str) -> Result<Box<&T>, crate::compiler::errors::proc_macro_errors::StructFieldNotFoundError> {
                 let boxed_field_value: Box<&dyn std::any::Any> = match self.get_field(field_name_prm) {
                     Ok(v) => v,

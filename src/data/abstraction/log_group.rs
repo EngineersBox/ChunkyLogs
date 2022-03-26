@@ -1,1 +1,3 @@
-pub struct LogGroup
+pub struct LogGroup {
+
+}

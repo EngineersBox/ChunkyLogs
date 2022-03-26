@@ -1,11 +1,12 @@
 use crate::data::abstraction::log_group::LogGroup;
-use crate::reflective_attributes;
 use crate::encoding::decoder::Decoder;
 use crate::encoding::encoder::Encoder;
 use crate::encoding::errors::encoding_errors;
 use crate::encoding::transcoder::Transcoder;
+use crate::{byte_layout, reify};
+use super::chunk_entry::ChunkEntry;
 
-reflective_attributes! {
+reify! {
     pub struct Chunk {
         #[bytes_size=8]
         pub timestamp_from: u64,
@@ -16,6 +17,14 @@ reflective_attributes! {
         pub entries: Vec<ChunkEntry>,
     }
 }
+
+// byte_layout! {
+//     Chunk
+//     direct [timestamp_from, 8]
+//     direct [timestamp_to, 8]
+//     direct [length, 4]
+//     composite [entries, length, ChunkEntry]
+// }
 
 impl Decoder for Chunk {
     fn decode(from: &Vec<u8>) -> Result<Box<Self>, encoding_errors::DecoderError<Vec<u8>>> {

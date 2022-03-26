@@ -1,6 +1,6 @@
-use crate::reflective_attributes;
+use crate::reify;
 
-reflective_attributes!{
+reify!{
     pub struct ChunkOffsets {
         #[byte_size=4]
         pub sector_index: u32,

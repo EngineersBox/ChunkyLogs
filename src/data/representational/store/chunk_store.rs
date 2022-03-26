@@ -1,12 +1,15 @@
+use std::fs::File;
+use std::io;
+use memmap::{Mmap, MmapOptions};
 use crate::data::abstraction::log_store::LogStore;
-use crate::reflective_attributes;
+use crate::reify;
 use super::chunk_store_header::ChunkStoreHeader;
 use crate::encoding::decoder::Decoder;
 use crate::encoding::encoder::Encoder;
 use crate::encoding::errors::encoding_errors;
 use crate::encoding::transcoder::Transcoder;
 
-reflective_attributes!{
+reify!{
     pub struct ChunkStore {
         pub header: ChunkStoreHeader,
         #[byte_size=8]

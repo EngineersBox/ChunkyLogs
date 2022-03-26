@@ -1,11 +1,11 @@
 use crate::data::abstraction::log_entry::LogEntry;
-use crate::reflective_attributes;
+use crate::reify;
 use crate::encoding::decoder::Decoder;
 use crate::encoding::encoder::Encoder;
 use crate::encoding::errors::encoding_errors;
 use crate::encoding::transcoder::Transcoder;
 
-reflective_attributes!{
+reify!{
     pub struct ChunkEntry {
         #[bytes_size=8]
         pub timestamp: u64,
