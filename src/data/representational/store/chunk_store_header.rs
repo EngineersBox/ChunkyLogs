@@ -5,6 +5,7 @@ use std::io;
 use memmap::{Mmap, MmapOptions};
 
 reify!{
+    #[derive(Debug,Default)]
     pub struct ChunkStoreHeader {
         #[byte_size=8]
         pub length: u64,
@@ -20,10 +21,10 @@ reify!{
 
 byte_layout! {
     ChunkStoreHeader
-    value [length, be_u64]
-    value [sector_size, be_u64]
-    value [chunk_count, be_u32]
-    value [chunk_offsets_length, be_u32]
+    value [length, {nom::number::complete::be_u64::<I,E>}]
+    value [sector_size, {nom::number::complete::be_u64::<I,E>}]
+    value [chunk_count, {nom::number::complete::be_u32::<I,E>}]
+    value [chunk_offsets_length, {nom::number::complete::be_u32::<I,E>}]
     typed_vec [chunk_offsets, chunk_offsets_length, ChunkOffsets]
 }
 

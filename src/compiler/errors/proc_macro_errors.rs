@@ -31,3 +31,20 @@ impl fmt::Display for TypedAttributeRetrievalError {
         )
     }
 }
+
+#[derive(Debug)]
+pub struct ByteLayoutParsingError {
+    pub type_name: String,
+    pub field_name: String,
+}
+
+impl fmt::Display for ByteLayoutParsingError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "Could not parse bytes into {}::{}",
+            self.type_name,
+            self.field_name,
+        )
+    }
+}
