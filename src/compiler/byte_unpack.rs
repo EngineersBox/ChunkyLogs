@@ -10,6 +10,20 @@ impl ToVec<u8> for &[u8] {
 
 #[macro_export]
 macro_rules! byte_layout {
+    (@internal to_bytes_ref $self_accessor:ident, $number_target:ident$(, $endianness:ident)?) => {
+        match stringify!($($endianness)?) {
+            "Big" => $self_accessor.$number_target.to_be_bytes().to_vec(),
+            "Little" => $self_accessor.$number_target.to_le_bytes().to_vec(),
+            _ => $self_accessor.$number_target.to_ne_bytes().to_vec(),
+        }
+    };
+    (@internal to_bytes_val $val:ident$(, $endianness:ident)?) => {
+        match stringify!($($endianness)?) {
+            "Big" => $val.to_be_bytes().to_vec(),
+            "Little" => $val.to_le_bytes().to_vec(),
+            _ => $val.to_ne_bytes().to_vec(),
+        }
+    };
     (@reader value [$target_field:ident, $byte_parser:ident$(, $endianness:ident)?], $self_accessor:ident, $tail:ident) => {
         match nom::number::complete::$byte_parser::<I,E>$((nom::number::Endianness::$endianness))?($tail) {
             Ok((t, b)) => {
@@ -21,6 +35,9 @@ macro_rules! byte_layout {
                 field_name: stringify!($target_field).to_string(),
             }),
         };
+    };
+    (@writer value [$target_field:ident, $byte_parser:ident$(, $endianness:ident)?], $self_accessor:ident, $accum:ident) => {
+        $accum.append(&mut byte_layout!(@internal to_bytes_ref $self_accessor, $target_field $(, $endianness)?));
     };
     (@reader bytes_vec [$target_field_pure:ident, $ref_field_byte_count:ident], $self_accessor:ident, $tail:ident) => {
         match nom::bytes::complete::take::<_, I, E>($self_accessor.$ref_field_byte_count)($tail) {
@@ -34,6 +51,12 @@ macro_rules! byte_layout {
             }),
         }
     };
+    (@writer bytes_vec [$target_field_pure:ident, $ref_field_byte_count:ident], $self_accessor:ident, $accum:ident) => {
+        $accum.append(&mut $self_accessor.$target_field_pure.iter()
+            .flat_map(|val| -> Vec<u8> { byte_layout!(@internal to_bytes_val val) })
+            .collect::<Vec<u8>>()
+        );
+    };
     (@reader bytes_vec_lit [$target_field_bytes_vec_lit:ident, $field_byte_count:literal], $self_accessor:ident, $tail:ident) => {
         match nom::bytes::complete::take::<_, I, E>($field_byte_count as usize)($tail) {
             Ok((t, b)) => {
@@ -45,6 +68,12 @@ macro_rules! byte_layout {
                 field_name: stringify!($target_field_pure).to_string(),
             }),
         }
+    };
+    (@writer bytes_vec_lit [$target_field_bytes_vec_lit:ident, $field_byte_count:literal], $self_accessor:ident, $accum:ident) => {
+        $accum.append(&mut $self_accessor.$target_field_bytes_vec_lit.iter()
+            .flat_map(|val| -> Vec<u8> { byte_layout!(@internal to_bytes_val val) })
+            .collect::<Vec<u8>>()
+        );
     };
     (@reader bytes_vec_null_term [$target_field_bytes_vec_nt:ident], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_bytes_vec_nt = Vec::new();
@@ -65,6 +94,13 @@ macro_rules! byte_layout {
             };
         }
     };
+    (@writer bytes_vec_null_term [$target_field_bytes_vec_nt:ident], $self_accessor:ident, $accum:ident) => {
+        $accum.append(&mut $self_accessor.$target_field_bytes_vec_nt.iter()
+            .flat_map(|val| -> Vec<u8> { byte_layout!(@internal to_bytes_val val) })
+            .collect::<Vec<u8>>()
+        );
+        $accum.push(0x00);
+    };
     (@reader primitive_vec [$target_field_primitive:ident, $ref_field_primitive_byte_count:ident, $primitive_byte_parser:ident$(, $endianness:ident)?], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_primitive = Vec::with_capacity($self_accessor.$ref_field_primitive_byte_count as usize);
         for _ in 0..$self_accessor.$ref_field_primitive_byte_count {
@@ -79,6 +115,12 @@ macro_rules! byte_layout {
                 }),
             };
         }
+    };
+    (@writer primitive_vec [$target_field_primitive:ident, $ref_field_primitive_byte_count:ident, $primitive_byte_parser:ident$(, $endianness:ident)?], $self_accessor:ident, $accum:ident) => {
+        $accum.append(&mut $self_accessor.$target_field_primitive.iter()
+            .flat_map(|val| -> Vec<u8> { byte_layout!(@internal to_bytes_val val $(, $endianness)?) })
+            .collect::<Vec<u8>>()
+        );
     };
     (@reader primitive_vec_lit [$target_field_primitive_lit:ident, $primitive_byte_count_lit:literal, $primitive_byte_parser:ident$(, $endianness:ident)?], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_primitive_lit = Vec::with_capacity($primitive_byte_count_lit as usize);
@@ -95,6 +137,12 @@ macro_rules! byte_layout {
             };
         }
     };
+    (@writer primitive_vec_lit [$target_field_primitive_lit:ident, $primitive_byte_count_lit:literal, $primitive_byte_parser:ident$(, $endianness:ident)?], $self_accessor:ident, $accum:ident) => {
+        $accum.append(&mut $self_accessor.$target_field_primitive_lit.iter()
+            .flat_map(|val| -> Vec<u8> { byte_layout!(@internal to_bytes_val val $(, $endianness)?) })
+            .collect::<Vec<u8>>()
+        );
+    };
     (@reader composite_vec [$target_field_composite:ident, $ref_field_composite_byte_count:ident, $composite_struct_name:ident], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_composite = Vec::with_capacity($self_accessor.$ref_field_composite_byte_count as usize);
         for _ in 0..$self_accessor.$ref_field_composite_byte_count {
@@ -107,6 +155,12 @@ macro_rules! byte_layout {
                 Err(e) => return Err(e),
             };
         }
+    };
+    (@writer composite_vec [$target_field_composite:ident, $ref_field_composite_byte_count:ident, $composite_struct_name:ident], $self_accessor:ident, $accum:ident) => {
+        $accum.append(&mut $self_accessor.$target_field_composite.iter()
+            .flat_map(|val| -> Vec<u8> { val.into_bytes() })
+            .collect::<Vec<u8>>()
+        );
     };
     (@reader composite_vec_lit [$target_field_composite_lit:ident, $composite_byte_count_lit:literal, $composite_struct_name:ident], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_composite_lit = Vec::with_capacity($composite_byte_count_lit as usize);
@@ -121,6 +175,12 @@ macro_rules! byte_layout {
             };
         }
     };
+    (@writer composite_vec_lit [$target_field_composite_lit:ident, $composite_byte_count_lit:literal, $composite_struct_name:ident], $self_accessor:ident, $accum:ident) => {
+        $accum.append(&mut $self_accessor.$target_field_composite_lit.iter()
+            .flat_map(|val| -> Vec<u8> { val.into_bytes() })
+            .collect::<Vec<u8>>()
+        );
+    };
     (@reader composite [$target_field_composite:ident, $composite_struct_name:ident], $self_accessor:ident, $tail:ident) => {
         let mut other: $composite_struct_name = Default::default();
         match other.parse_bytes::<I,E>($tail) {
@@ -130,6 +190,9 @@ macro_rules! byte_layout {
             },
             Err(e) => return Err(e),
         };
+    };
+    (@writer composite [$target_field_composite:ident, $composite_struct_name:ident], $self_accessor:ident, $accum:ident) => {
+        $accum.append(&mut $self_accessor.$target_field_composite.into_bytes());
     };
     (
         $struct_name:ident
@@ -144,6 +207,12 @@ macro_rules! byte_layout {
                 let mut tail = bytes;
                 $(byte_layout!(@reader $alt [$elem$(, $args)*],self,tail);)+
                 return Ok(tail);
+            }
+            #[allow(dead_code)]
+            pub fn into_bytes(&self) -> Vec<u8> {
+                let mut accumulator: Vec<u8> = Vec::new();
+                $(byte_layout!(@writer $alt [$elem$(, $args)*],self,accumulator);)+
+                return accumulator;
             }
         }
     }
