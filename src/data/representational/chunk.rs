@@ -18,13 +18,13 @@ reify! {
     }
 }
 
-// byte_layout! {
-//     Chunk
-//     direct [timestamp_from, 8]
-//     direct [timestamp_to, 8]
-//     direct [length, 4]
-//     composite [entries, length, ChunkEntry]
-// }
+byte_layout! {
+    Chunk
+    value [timestamp_from, {nom::number::complete::be_u64::<I,E>}]
+    value [timestamp_to, {nom::number::complete::be_u64::<I,E>}]
+    value [length, {nom::number::complete::be_u32::<I,E>}]
+    composite_vec [entries, length, ChunkEntry]
+}
 
 impl Decoder for Chunk {
     fn decode(from: &Vec<u8>) -> Result<Box<Self>, encoding_errors::DecoderError<Vec<u8>>> {

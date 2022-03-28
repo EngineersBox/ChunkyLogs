@@ -25,7 +25,7 @@ byte_layout! {
     value [sector_size, {nom::number::complete::be_u64::<I,E>}]
     value [chunk_count, {nom::number::complete::be_u32::<I,E>}]
     value [chunk_offsets_length, {nom::number::complete::be_u32::<I,E>}]
-    typed_vec [chunk_offsets, chunk_offsets_length, ChunkOffsets]
+    composite_vec [chunk_offsets, chunk_offsets_length, ChunkOffsets]
 }
 
 impl ChunkStoreHeader {

@@ -1,3 +1,5 @@
+use nom::CompareResult;
+
 pub trait ToVec<T> {
     fn to_vec(self) -> Vec<T>;
 }
@@ -44,6 +46,25 @@ macro_rules! byte_layout {
                 type_name: std::any::type_name::<Self>().to_string(),
                 field_name: stringify!($target_field_pure).to_string(),
             }),
+        }
+    };
+    (@inner bytes_vec_null_term [$target_field_bytes_vec_nt:ident, $self_accessor:ident, $tail:ident]) => {
+        $self_accessor.$target_field_bytes_vec_nt = Vec::new();
+        loop {
+            match nom::bytes::complete::take::<_, I, E>(1usize)($tail) {
+                Ok((t, v)) => {
+                    $tail = t;
+                    let vec_v = v.to_vec();
+                    if vec_v.get(0).unwrap() == &0x00u8 {
+                        break;
+                    }
+                    $self_accessor.$target_field_bytes_vec_nt.push(*vec_v.get(0).unwrap());
+                },
+                Err(_) => return Err(crate::compiler::errors::proc_macro_errors::ByteLayoutParsingError{
+                    type_name: std::any::type_name::<Self>().to_string(),
+                    field_name: stringify!($target_field_primitive).to_string(),
+                }),
+            };
         }
     };
     (@inner primitive_vec [$target_field_primitive:ident, $ref_field_primitive_byte_count:ident, $primitive_byte_parser:expr, $self_accessor:ident, $tail:ident]) => {
@@ -102,18 +123,28 @@ macro_rules! byte_layout {
             };
         }
     };
+    (@inner composite [$target_field_composite:ident, $composite_struct_name:ident, $self_accessor:ident, $tail:ident]) => {
+        let mut other: $composite_struct_name = Default::default();
+        match other.parse_bytes::<I,E>($tail) {
+            Ok(new_tail) => {
+                $tail = new_tail;
+                $self_accessor.$target_field_composite = other;
+            },
+            Err(e) => return Err(e),
+        };
+    };
     (
         $struct_name:ident
-        $($alt:ident [$elem:ident$(, $args:tt)+])+
+        $($alt:ident [$elem:ident$(, $args:tt)*])+
     ) => {
         impl $struct_name {
             #[allow(dead_code)]
             pub fn parse_bytes<I, E>(&mut self, bytes: I) -> Result<I, crate::compiler::errors::proc_macro_errors::ByteLayoutParsingError>
             where
-                I: nom::InputTake + crate::compiler::byte_unpack::ToVec<u8> + nom::Slice<std::ops::RangeFrom<usize>> + nom::InputIter<Item = u8> + nom::InputLength,
+                I:  nom::InputTakeAtPosition + nom::FindSubstring<I> + nom::InputTake + crate::compiler::byte_unpack::ToVec<u8> + nom::Slice<std::ops::RangeFrom<usize>> + nom::InputIter<Item = u8> + nom::InputLength + Clone,
                 E: nom::error::ParseError<I> {
                 let mut tail = bytes;
-                $(byte_layout!(@inner $alt [$elem$(, $args)+,self,tail]);)+
+                $(byte_layout!(@inner $alt [$elem$(, $args)*,self,tail]);)+
                 return Ok(tail);
             }
         }
