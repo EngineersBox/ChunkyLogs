@@ -131,6 +131,12 @@ fn main() {
     std::thread::sleep(Duration::from_millis(1000));
 }
 
+fn create_test_bytes() -> Vec<Byte> {
+    let mut bytes: Vec<Byte> = Vec::new();
+
+    return bytes;
+}
+
 /*
 * ==== HEADER ====
 * 00, 00, 00, 00, 00, 00, 01, FF,

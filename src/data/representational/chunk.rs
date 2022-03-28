@@ -20,9 +20,9 @@ reify! {
 
 byte_layout! {
     Chunk
-    value [timestamp_from, {nom::number::complete::be_u64::<I,E>}]
-    value [timestamp_to, {nom::number::complete::be_u64::<I,E>}]
-    value [length, {nom::number::complete::be_u32::<I,E>}]
+    value [timestamp_from, u64, Big]
+    value [timestamp_to, u64, Big]
+    value [length, u32, Big]
     composite_vec [entries, length, ChunkEntry]
 }
 

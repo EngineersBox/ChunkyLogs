@@ -14,7 +14,7 @@ reify!{
 
 byte_layout!{
     ChunkOffsets
-    value [sector_index, {nom::number::complete::be_u32::<I,E>}]
-    value [start_or_end_flag, {nom::number::complete::be_u8::<I,E>}]
-    value [sector_offset, {nom::number::complete::be_u32::<I,E>}]
+    value [sector_index, u32, Big]
+    value [start_or_end_flag, u8]
+    value [sector_offset, u32, Big]
 }

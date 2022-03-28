@@ -10,8 +10,8 @@ impl ToVec<u8> for &[u8] {
 
 #[macro_export]
 macro_rules! byte_layout {
-    (@inner value [$target_field:ident, $byte_parser:expr, $self_accessor:ident, $tail:ident]) => {
-        match $byte_parser($tail) {
+    (@reader value [$target_field:ident, $byte_parser:ident$(, $endianness:ident)?], $self_accessor:ident, $tail:ident) => {
+        match nom::number::complete::$byte_parser::<I,E>$((nom::number::Endianness::$endianness))?($tail) {
             Ok((t, b)) => {
                 $tail = t;
                 $self_accessor.$target_field = b;
@@ -22,7 +22,7 @@ macro_rules! byte_layout {
             }),
         };
     };
-    (@inner bytes_vec [$target_field_pure:ident, $ref_field_byte_count:ident, $self_accessor:ident, $tail:ident]) => {
+    (@reader bytes_vec [$target_field_pure:ident, $ref_field_byte_count:ident], $self_accessor:ident, $tail:ident) => {
         match nom::bytes::complete::take::<_, I, E>($self_accessor.$ref_field_byte_count)($tail) {
             Ok((t, b)) => {
                 $tail = t;
@@ -34,7 +34,7 @@ macro_rules! byte_layout {
             }),
         }
     };
-    (@inner bytes_vec_lit [$target_field_bytes_vec_lit:ident, $field_byte_count:literal, $self_accessor:ident, $tail:ident]) => {
+    (@reader bytes_vec_lit [$target_field_bytes_vec_lit:ident, $field_byte_count:literal], $self_accessor:ident, $tail:ident) => {
         match nom::bytes::complete::take::<_, I, E>($field_byte_count as usize)($tail) {
             Ok((t, b)) => {
                 $tail = t;
@@ -46,7 +46,7 @@ macro_rules! byte_layout {
             }),
         }
     };
-    (@inner bytes_vec_null_term [$target_field_bytes_vec_nt:ident, $self_accessor:ident, $tail:ident]) => {
+    (@reader bytes_vec_null_term [$target_field_bytes_vec_nt:ident], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_bytes_vec_nt = Vec::new();
         loop {
             match nom::bytes::complete::take::<_, I, E>(1usize)($tail) {
@@ -65,10 +65,10 @@ macro_rules! byte_layout {
             };
         }
     };
-    (@inner primitive_vec [$target_field_primitive:ident, $ref_field_primitive_byte_count:ident, $primitive_byte_parser:expr, $self_accessor:ident, $tail:ident]) => {
+    (@reader primitive_vec [$target_field_primitive:ident, $ref_field_primitive_byte_count:ident, $primitive_byte_parser:ident$(, $endianness:ident)?], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_primitive = Vec::with_capacity($self_accessor.$ref_field_primitive_byte_count as usize);
         for _ in 0..$self_accessor.$ref_field_primitive_byte_count {
-            match $primitive_byte_parser($tail) {
+            match nom::number::complete::$primitive_byte_parser::<I,E>$((nom::number::Endianness::$endianness))?($tail) {
                 Ok((t, v)) => {
                     $tail = t;
                     $self_accessor.$target_field_primitive.push(v);
@@ -80,10 +80,10 @@ macro_rules! byte_layout {
             };
         }
     };
-    (@inner primitive_vec_lit [$target_field_primitive_lit:ident, $primitive_byte_count_lit:literal, $primitive_byte_parser:expr, $self_accessor:ident, $tail:ident]) => {
+    (@reader primitive_vec_lit [$target_field_primitive_lit:ident, $primitive_byte_count_lit:literal, $primitive_byte_parser:ident$(, $endianness:ident)?], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_primitive_lit = Vec::with_capacity($primitive_byte_count_lit as usize);
         for _ in 0..$primitive_byte_count_lit {
-            match $primitive_byte_parser($tail) {
+            match nom::number::complete::$primitive_byte_parser::<I,E>$((nom::number::Endianness::$endianness))?($tail) {
                 Ok((t, v)) => {
                     $tail = t;
                     $self_accessor.$target_field_primitive_lit.push(v);
@@ -95,7 +95,7 @@ macro_rules! byte_layout {
             };
         }
     };
-    (@inner composite_vec [$target_field_composite:ident, $ref_field_composite_byte_count:ident, $composite_struct_name:ident, $self_accessor:ident, $tail:ident]) => {
+    (@reader composite_vec [$target_field_composite:ident, $ref_field_composite_byte_count:ident, $composite_struct_name:ident], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_composite = Vec::with_capacity($self_accessor.$ref_field_composite_byte_count as usize);
         for _ in 0..$self_accessor.$ref_field_composite_byte_count {
             let mut other: $composite_struct_name = Default::default();
@@ -108,7 +108,7 @@ macro_rules! byte_layout {
             };
         }
     };
-    (@inner composite_vec_lit [$target_field_composite_lit:ident, $composite_byte_count_lit:literal, $composite_struct_name:ident, $self_accessor:ident, $tail:ident]) => {
+    (@reader composite_vec_lit [$target_field_composite_lit:ident, $composite_byte_count_lit:literal, $composite_struct_name:ident], $self_accessor:ident, $tail:ident) => {
         $self_accessor.$target_field_composite_lit = Vec::with_capacity($composite_byte_count_lit as usize);
         for _ in 0..$composite_byte_count_lit {
             let mut other: $composite_struct_name = Default::default();
@@ -121,7 +121,7 @@ macro_rules! byte_layout {
             };
         }
     };
-    (@inner composite [$target_field_composite:ident, $composite_struct_name:ident, $self_accessor:ident, $tail:ident]) => {
+    (@reader composite [$target_field_composite:ident, $composite_struct_name:ident], $self_accessor:ident, $tail:ident) => {
         let mut other: $composite_struct_name = Default::default();
         match other.parse_bytes::<I,E>($tail) {
             Ok(new_tail) => {
@@ -142,7 +142,7 @@ macro_rules! byte_layout {
                 I:  nom::InputTakeAtPosition + nom::FindSubstring<I> + nom::InputTake + crate::compiler::byte_unpack::ToVec<u8> + nom::Slice<std::ops::RangeFrom<usize>> + nom::InputIter<Item = u8> + nom::InputLength + Clone,
                 E: nom::error::ParseError<I> {
                 let mut tail = bytes;
-                $(byte_layout!(@inner $alt [$elem$(, $args)*,self,tail]);)+
+                $(byte_layout!(@reader $alt [$elem$(, $args)*],self,tail);)+
                 return Ok(tail);
             }
         }

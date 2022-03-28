@@ -24,10 +24,10 @@ reify!{
 
 byte_layout! {
     ChunkStoreHeader
-    value [length, {nom::number::complete::be_u64::<I,E>}]
-    value [sector_size, {nom::number::complete::be_u64::<I,E>}]
-    value [chunk_count, {nom::number::complete::be_u32::<I,E>}]
-    value [chunk_offsets_length, {nom::number::complete::be_u32::<I,E>}]
+    value [length, u64, Big]
+    value [sector_size, u64, Big]
+    value [chunk_count, u32, Big]
+    value [chunk_offsets_length, u32, Big]
     composite_vec [chunk_offsets, chunk_offsets_length, ChunkOffsets]
 }
 

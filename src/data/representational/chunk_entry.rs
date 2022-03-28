@@ -19,8 +19,8 @@ reify!{
 
 byte_layout!{
     ChunkEntry
-    value [timestamp, {nom::number::complete::be_u64::<I,E>}]
-    value [action, {nom::number::complete::be_u8::<I,E>}]
+    value [timestamp, u64, Big]
+    value [action, u8]
     bytes_vec_null_term [target]
     bytes_vec_null_term [message]
 }

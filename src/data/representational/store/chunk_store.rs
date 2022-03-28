@@ -3,6 +3,7 @@ use std::io;
 use memmap::{Mmap, MmapOptions};
 use crate::data::abstraction::log_store::LogStore;
 use crate::{byte_layout, reify};
+use crate::data::representational::chunk::Chunk;
 use super::chunk_store_header::ChunkStoreHeader;
 use crate::encoding::decoder::Decoder;
 use crate::encoding::encoder::Encoder;
@@ -14,13 +15,14 @@ reify!{
         pub header: ChunkStoreHeader,
         #[byte_size=8]
         pub chunks_length: u64,
+        pub chunks: Vec<Chunk>,
     }
 }
 
 byte_layout!{
     ChunkStore
     composite [header, ChunkStoreHeader]
-    value [chunks_length, {nom::number::complete::be_u64::<I,E>}]
+    value [chunks_length, u64, Big]
 }
 
 impl Decoder for ChunkStore {
