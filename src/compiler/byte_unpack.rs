@@ -1,5 +1,3 @@
-use nom::CompareResult;
-
 pub trait ToVec<T> {
     fn to_vec(self) -> Vec<T>;
 }

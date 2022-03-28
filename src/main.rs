@@ -19,7 +19,7 @@ extern crate core;
 
 use std::fs::File;
 use std::io;
-use std::io::Write;
+use std::io::{Error, Write};
 use std::time::Duration;
 use lazy_static::lazy_static;
 use slog::Logger;
@@ -27,6 +27,7 @@ use slog::Logger;
 use crate::compression::compressor::Compressor;
 use crate::logging::logging::initialize_logging;
 use crate::configuration::config::Config;
+use crate::data::representational::store::chunk_store_header::ChunkStoreHeader;
 
 type Byte = u8;
 
@@ -114,6 +115,18 @@ fn main() {
     info!(&crate::LOGGER, "Configured logging");
     let mut properties: Config = Config::new("config/config.properties");
     properties.read();
+
+    let mut chunk_store_header: ChunkStoreHeader = ChunkStoreHeader::default();
+    let file: io::Result<File> = File::open("log_chunks.bin");
+    if file.is_ok() {
+        match chunk_store_header.read_from_file(&file.unwrap()) {
+            Ok(_) => info!(crate::LOGGER, "{:?}", chunk_store_header),
+            Err(e) => {
+                error!(crate::LOGGER, "An error occurred: {}", e.to_string());
+                return;
+            }
+        }
+    }
 
     std::thread::sleep(Duration::from_millis(1000));
 }

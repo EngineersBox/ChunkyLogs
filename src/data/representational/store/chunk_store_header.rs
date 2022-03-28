@@ -2,7 +2,10 @@ use crate::{byte_layout, reify};
 use super::chunk_offsets::ChunkOffsets;
 use std::fs::File;
 use std::io;
+use std::io::ErrorKind;
 use memmap::{Mmap, MmapOptions};
+use nom::AsBytes;
+use crate::compiler::errors::proc_macro_errors::ByteLayoutParsingError;
 
 reify!{
     #[derive(Debug,Default)]
@@ -45,7 +48,7 @@ impl ChunkStoreHeader {
             }).sum::<usize>();
         return Ok(sum);
     }
-    pub fn read_from_file(&self, file: &File) -> Result<(), io::Error> {
+    pub fn read_from_file(&mut self, file: &File) -> Result<(), io::Error> {
         let header_length: usize = match Self::bytes_len() {
             Ok(v) => v,
             Err(e) => return Err(e),
@@ -55,6 +58,12 @@ impl ChunkStoreHeader {
                 .len(header_length)
                 .map(file)?
         };
-        return Ok(());
+        return match self.parse_bytes::<&'_ [u8], nom::error::Error<_>>(mmap_file.as_bytes()) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(io::Error::new(
+                ErrorKind::InvalidInput,
+                e.to_string()
+            )),
+        };
     }
 }
