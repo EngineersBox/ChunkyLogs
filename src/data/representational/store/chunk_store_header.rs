@@ -32,7 +32,7 @@ byte_layout! {
 }
 
 impl ChunkStoreHeader {
-    fn bytes_len() -> Result<usize, std::io::Error> {
+    pub fn bytes_len() -> Result<usize, std::io::Error> {
         let sum: usize = Self::get_field_attribute_map()
             .into_values()
             .map(|val: String| -> usize {

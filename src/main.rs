@@ -99,7 +99,33 @@ fn write_test_file() {
     bytes.append(chunk_bytes.to_vec().as_mut());
     bytes.append(chunk_bytes.to_vec().as_mut());
 
-    let mut file: io::Result<File> = File::create("E:/ChunkyLogs/log_chunks.bin");
+    let mut file: io::Result<File> = File::create("data/log_chunks.bin");
+    if file.is_ok() {
+        match file.unwrap().write_all(bytes.as_slice()) {
+            Ok(_) => {},
+            Err(e) => {
+                error!(crate::LOGGER, "An error occurred: {}", e.to_string());
+                return;
+            }
+        }
+    }
+}
+
+fn create_test_bytes() {
+    let mut bytes: Vec<Byte> = Vec::new();
+    let mut chunk_store_header: ChunkStoreHeader = ChunkStoreHeader{
+        length: 0,
+        sector_size: 50,
+        chunk_count: 2,
+        chunk_offsets_length: 0,
+        chunk_offsets: Vec::new(),
+    };
+    match ChunkStoreHeader::bytes_len() {
+        Ok(length) => chunk_store_header.length = length as u64,
+        Err(_) => {},
+    };
+    bytes.append(&mut chunk_store_header.into_bytes());
+    let file: io::Result<File> = File::create("data/chunk_store_header.bin");
     if file.is_ok() {
         match file.unwrap().write_all(bytes.as_slice()) {
             Ok(_) => {},
@@ -113,14 +139,15 @@ fn write_test_file() {
 
 fn main() {
     info!(&crate::LOGGER, "Configured logging");
-    let mut properties: Config = Config::new("config/config.properties");
-    properties.read();
+    // let mut properties: Config = Config::new("config/config.properties");
+    // properties.read();
 
+    // create_test_bytes();
     let mut chunk_store_header: ChunkStoreHeader = ChunkStoreHeader::default();
-    let file: io::Result<File> = File::open("log_chunks.bin");
+    let file: io::Result<File> = File::open("data/chunk_store_header.bin");
     if file.is_ok() {
         match chunk_store_header.read_from_file(&file.unwrap()) {
-            Ok(_) => info!(crate::LOGGER, "{:?}", chunk_store_header),
+            Ok(_) => info!(crate::LOGGER, "Header: {:?}", chunk_store_header),
             Err(e) => {
                 error!(crate::LOGGER, "An error occurred: {}", e.to_string());
                 return;
@@ -129,12 +156,6 @@ fn main() {
     }
 
     std::thread::sleep(Duration::from_millis(1000));
-}
-
-fn create_test_bytes() -> Vec<Byte> {
-    let mut bytes: Vec<Byte> = Vec::new();
-
-    return bytes;
 }
 
 /*
