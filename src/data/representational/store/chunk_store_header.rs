@@ -86,12 +86,15 @@ impl ChunkStoreHeader {
         };
     }
     pub fn string_format_chunk_sector_ratio(&self) -> String {
+        let mut chunks_outer: String = String::new();
         let mut chunks: String = String::new();
         for i in 0..(self.chunk_offsets_length - 1) {
-            let mut chunk_str: String = String::new();
-            chunk_str.push('|');
             let next_offset: &ChunkOffsets = self.chunk_offsets.get(i as usize + 1).unwrap();
             let chunk_size: u32 = (next_offset.sector_index * self.sector_size as u32) + next_offset.sector_offset as u32;
+            chunks_outer.push('+');
+            chunks_outer.push_str("-".repeat(chunk_size as usize -1).as_str());
+            let mut chunk_str: String = String::new();
+            chunk_str.push('|');
             chunk_str.push_str(format!(
                 "C{} {}B",
                 i,
@@ -102,29 +105,39 @@ impl ChunkStoreHeader {
             chunks.push_str(chunk_str.as_str());
         }
         let last_offset: &ChunkOffsets = self.chunk_offsets.get((self.chunk_offsets_length - 1) as usize).unwrap();
+        let mut sector_markers_outer: String = String::new();
         let mut sector_markers: String = String::new();
         for i in 0..(last_offset.sector_index + 1) {
-            let mut sector_marker: String = String::new();
-            sector_marker.push('|');
+            sector_markers_outer.push('+');
+            sector_markers_outer.push_str("-".repeat((self.sector_size - 1) as usize).as_str());
+            sector_markers.push('|');
             let num_string: String = format!("{}", i);
-            sector_marker.push_str(num_string.as_str());
-            sector_marker.push_str(&*"-".repeat((self.sector_size - 2) as usize - num_string.len()));
-            sector_marker.push('-');
-            sector_markers.push_str(sector_marker.as_str());
+            sector_markers.push_str(num_string.as_str());
+            sector_markers.push_str(" ".repeat((self.sector_size - 2) as usize - num_string.len()).as_str());
+            sector_markers.push(' ');
         }
 
-        chunks.push('|');
-        chunks.push_str(format!(
+        let mut last_chunk: String = String::new();
+        last_chunk.push('|');
+        last_chunk.push_str(format!(
             "C{} ?B",
             self.chunk_offsets_length - 1
         ).as_str());
-        chunks.push(' ');
+        last_chunk.push(' ');
+        chunks.push_str(last_chunk.as_str());
+
+        chunks_outer.push('+');
+        chunks_outer.push_str("-".repeat(last_chunk.len() - 1).as_str());
         sector_markers.truncate(chunks.len());
+        sector_markers_outer.truncate(chunks.len());
         return format!(
-            "Sector size: {}B\nSectors: {}\nChunks:  {}",
+            "Sector size: {}B\n         {}\nSectors: {}\n         {}\nChunks:  {}\n         {}",
             self.sector_size,
+            sector_markers_outer,
             sector_markers,
+            chunks_outer,
             chunks,
+            chunks_outer,
         );
     }
 }
