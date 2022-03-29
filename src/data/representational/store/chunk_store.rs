@@ -1,6 +1,3 @@
-use std::fs::File;
-use std::io;
-use memmap::{Mmap, MmapOptions};
 use crate::data::abstraction::log_store::LogStore;
 use crate::{byte_layout, reify};
 use crate::data::representational::chunk::Chunk;
@@ -12,8 +9,7 @@ use crate::encoding::transcoder::Transcoder;
 
 reify!{
     #[derive(Debug,Default)]
-    pub struct ChunkStore {
-        pub header: ChunkStoreHeader,
+    pub struct Chunks {
         #[byte_size=8]
         pub chunks_length: u64,
         pub chunks: Vec<Chunk>,
@@ -21,10 +17,22 @@ reify!{
 }
 
 byte_layout!{
-    ChunkStore
-    composite [header, ChunkStoreHeader]
+    Chunks
     value [chunks_length, u64, Big]
     composite_vec [chunks, chunks_length, Chunk]
+}
+
+reify!{
+    #[derive(Debug,Default)]
+    pub struct ChunkStore {
+        pub header: ChunkStoreHeader,
+        pub chunks: Chunks,
+    }
+}
+
+byte_layout!{
+    ChunkStore
+    composite [header, ChunkStoreHeader]
 }
 
 impl Decoder for ChunkStore {

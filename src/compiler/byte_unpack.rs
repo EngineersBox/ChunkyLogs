@@ -202,7 +202,7 @@ macro_rules! byte_layout {
             #[allow(dead_code)]
             pub fn parse_bytes<I, E>(&mut self, bytes: I) -> Result<I, crate::compiler::errors::proc_macro_errors::ByteLayoutParsingError>
             where
-                I:  nom::InputTakeAtPosition + nom::FindSubstring<I> + nom::InputTake + crate::compiler::byte_unpack::ToVec<u8> + nom::Slice<std::ops::RangeFrom<usize>> + nom::InputIter<Item = u8> + nom::InputLength + Clone,
+                I: nom::InputTakeAtPosition + nom::FindSubstring<I> + nom::InputTake + crate::compiler::byte_unpack::ToVec<u8> + nom::Slice<std::ops::RangeFrom<usize>> + nom::InputIter<Item = u8> + nom::InputLength + Clone,
                 E: nom::error::ParseError<I> {
                 let mut tail = bytes;
                 $(byte_layout!(@reader $alt [$elem$(, $args)*],self,tail);)+

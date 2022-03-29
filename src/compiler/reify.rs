@@ -21,7 +21,7 @@ macro_rules! reify{
             pub fn get_field_attribute(field_name_prm: &str) -> Result<Option<String>, crate::compiler::errors::proc_macro_errors::StructFieldNotFoundError> {
                 return match field_name_prm {
                     $(stringify!($field_name) => {
-                        let attr_value: String = stringify!($($field_attribute)?).to_string();
+                        let attr_value: String = stringify!($($field_attribute)?).replace(" ", "").to_string();
                         return Ok(if attr_value.is_empty() { None } else { Some(attr_value) });
                     },)*
                     _ => Err(crate::compiler::errors::proc_macro_errors::StructFieldNotFoundError{

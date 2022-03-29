@@ -126,14 +126,6 @@ fn create_test_bytes() {
         chunk_offsets_length: 0,
         chunk_offsets: Vec::new(),
     };
-    match ChunkStoreHeader::bytes_len() {
-        Ok(length) => chunk_store_header.length = length as u64,
-        Err(e) => {
-            error!(crate::LOGGER, "An error occurred: {}", e.to_string());
-            return;
-        },
-    };
-    bytes.append(&mut chunk_store_header.into_bytes());
 
     let mut chunk: Chunk = Chunk::default();
     let mut chunk_entry: ChunkEntry = ChunkEntry{
@@ -161,11 +153,12 @@ fn create_test_bytes() {
         sector_offset: (chunk_full_length as u16 % chunk_store.header.sector_size) as u16,
     };
     for _ in 0..chunk_store.header.chunk_count {
-        chunk_store.chunks.push(chunk.clone());
         chunk_store.header.chunk_offsets.push(chunk_offset.clone());
-        chunk_store.header.chunk_offsets_length += chunk_offset.into_bytes().len() as u32;
+        chunk_store.header.chunk_offsets_length += 1;
     }
-    chunk_store.chunks_length = chunk_full_length as u64;
+    chunk_store.header.length = chunk_store.header.into_bytes().len() as u64;
+
+    bytes.append(chunk_store.header.into_bytes().to_vec().as_mut());
 
     let file: io::Result<File> = File::create("data/chunk_store.bin");
     if file.is_ok() {
