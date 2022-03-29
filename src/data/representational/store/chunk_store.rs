@@ -7,7 +7,8 @@ use crate::encoding::transcoder::Transcoder;
 
 reify!{
     #[derive(Debug,Default)]
-    pub struct Chunks {
+    pub struct ChunkStore {
+        pub header: ChunkStoreHeader,
         #[byte_size=8]
         pub chunks_length: u64,
         pub chunks: Vec<Chunk>,
@@ -15,22 +16,10 @@ reify!{
 }
 
 byte_layout!{
-    Chunks
-    value [chunks_length, u64, Big]
-    composite_vec [chunks, chunks_length, Chunk]
-}
-
-reify!{
-    #[derive(Debug,Default)]
-    pub struct ChunkStore {
-        pub header: ChunkStoreHeader,
-        pub chunks: Chunks,
-    }
-}
-
-byte_layout!{
     ChunkStore
     composite [header, ChunkStoreHeader]
+    value [chunks_length, u64, Big]
+    composite_vec [chunks, chunks_length, Chunk]
 }
 
 impl Transcoder<LogStore> for ChunkStore {

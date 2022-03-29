@@ -139,22 +139,33 @@ fn create_test_bytes() {
     for i in 0..2 {
         chunk_entry.timestamp = i as u64;
         chunk_entry.action = i as u8;
-        chunk.entries.push(chunk_entry.clone());
-        chunk.length += 1;
+        chunk.entries.append(&mut chunk_entry.into_bytes());
+        chunk.entries_length += 1;
     }
     chunk.timestamp_from = 0;
     chunk.timestamp_to = 1;
-    let chunk_full_length: usize = chunk.into_bytes().len();
+
+    let mut compressor: Compressor = Compressor::new();
+    match compressor.compress_vec(&chunk.entries) {
+        Ok(b) => chunk.entries = b,
+        Err(e) => {
+            error!(crate::LOGGER, "An error occurred: {}", e.message);
+            return;
+        }
+    }
+    chunk.length = chunk.into_bytes().len() as u32;
 
     let mut chunk_store: ChunkStore = ChunkStore::default();
     chunk_store.header = chunk_store_header;
     for i in 0..chunk_store.header.chunk_count {
         let chunk_offset: ChunkOffsets = ChunkOffsets{
-            sector_index: ((i as u32 * chunk_full_length  as u32) / (chunk_store.header.sector_size as u32 * (chunk_store.header.chunk_offsets_length as u32) + 1)  as u32) as u32,
-            sector_offset: ((i * chunk_full_length as u16) % chunk_store.header.sector_size as u16) as u16,
+            sector_index: ((i as u32 * chunk.length) / (chunk_store.header.sector_size as u32 * (chunk_store.header.chunk_offsets_length as u32) + 1)  as u32) as u32,
+            sector_offset: ((i * chunk.length as u16) % chunk_store.header.sector_size as u16) as u16,
         };
         chunk_store.header.chunk_offsets.push(chunk_offset.clone());
         chunk_store.header.chunk_offsets_length += 1;
+        chunk_store.chunks.push(chunk.clone());
+        chunk_store.chunks_length += 1;
     }
     chunk_store.header.length = chunk_store.header.into_bytes().len() as u64;
 
@@ -186,6 +197,7 @@ fn main() {
             Err(e) => error!(crate::LOGGER, "An error occurred: {}", e.to_string()),
         }
     }
+    info!(crate::LOGGER, "{}", chunk_store_header.string_format_chunk_sector_ratio());
 
     std::thread::sleep(Duration::from_millis(1000));
 }

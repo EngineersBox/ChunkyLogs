@@ -7,22 +7,25 @@ use super::chunk_entry::ChunkEntry;
 reify! {
     #[derive(Debug,Default,Clone)]
     pub struct Chunk {
+        #[bytes_size=4]
+        pub length: u32,
         #[bytes_size=8]
         pub timestamp_from: u64,
         #[bytes_size=8]
         pub timestamp_to: u64,
         #[bytes_size=4]
-        pub length: u32,
-        pub entries: Vec<ChunkEntry>,
+        pub entries_length: u32,
+        pub entries: Vec<u8>,
     }
 }
 
 byte_layout! {
     Chunk
+    value [length, u32, Big]
     value [timestamp_from, u64, Big]
     value [timestamp_to, u64, Big]
-    value [length, u32, Big]
-    composite_vec [entries, length, ChunkEntry]
+    value [entries_length, u32, Big]
+    bytes_vec [entries, entries_length]
 }
 
 impl Transcoder<LogGroup> for Chunk {

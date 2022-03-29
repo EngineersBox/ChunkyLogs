@@ -3,9 +3,8 @@ use super::chunk_offsets::ChunkOffsets;
 use std::fs::File;
 use std::io;
 use std::io::{BufReader, ErrorKind, Read, Seek};
-use memmap::{Mmap, MmapOptions};
-use nom::AsBytes;
-use crate::compiler::errors::proc_macro_errors::StructFieldNotFoundError;
+use nom::{AsBytes, ExtendInto};
+
 
 reify!{
     #[derive(Debug,Default,Clone)]
@@ -32,7 +31,7 @@ byte_layout! {
 }
 
 impl ChunkStoreHeader {
-    pub fn header_length_bytes_count() -> Result<usize, std::io::Error> {
+    pub fn header_length() -> Result<usize, std::io::Error> {
         let attribute: Option<String> = match Self::get_field_attribute("length") {
             Ok(v) => v,
             Err(e) => return Err(std::io::Error::new(
@@ -58,14 +57,14 @@ impl ChunkStoreHeader {
         };
     }
     pub fn read_from_file(&mut self, file: &File) -> Result<(), io::Error> {
-        let header_length_bytes: usize = match Self::header_length_bytes_count() {
+        let header_length: usize = match Self::header_length() {
             Ok(v) => v,
             Err(e) => return Err(e),
         };
         let mut buf_reader: BufReader<&File> = BufReader::new(file);
-        let mut length_bytes: Vec<u8> = Vec::with_capacity(header_length_bytes);
+        let mut length_bytes: Vec<u8> = Vec::with_capacity(header_length);
         buf_reader.by_ref()
-            .take(header_length_bytes as u64)
+            .take(header_length as u64)
             .read_to_end(&mut length_bytes)?;
         let sized_length_bytes: u64 = match nom::number::complete::be_u64::<_, nom::error::Error<_>>(length_bytes.as_bytes()) {
             Ok((_, v)) => v,
@@ -85,5 +84,47 @@ impl ChunkStoreHeader {
                 e.to_string()
             )),
         };
+    }
+    pub fn string_format_chunk_sector_ratio(&self) -> String {
+        let mut chunks: String = String::new();
+        for i in 0..(self.chunk_offsets_length - 1) {
+            let mut chunk_str: String = String::new();
+            chunk_str.push('|');
+            let next_offset: &ChunkOffsets = self.chunk_offsets.get(i as usize + 1).unwrap();
+            let chunk_size: u32 = (next_offset.sector_index * self.sector_size as u32) + next_offset.sector_offset as u32;
+            chunk_str.push_str(format!(
+                "C{} {}B",
+                i,
+                chunk_size
+            ).as_str());
+            chunk_str.push_str(" ".repeat(chunk_size as usize - chunk_str.len() - 1).as_str());
+            chunk_str.push(' ');
+            chunks.push_str(chunk_str.as_str());
+        }
+        let last_offset: &ChunkOffsets = self.chunk_offsets.get((self.chunk_offsets_length - 1) as usize).unwrap();
+        let mut sector_markers: String = String::new();
+        for i in 0..(last_offset.sector_index + 1) {
+            let mut sector_marker: String = String::new();
+            sector_marker.push('|');
+            let num_string: String = format!("{}", i);
+            sector_marker.push_str(num_string.as_str());
+            sector_marker.push_str(&*"-".repeat((self.sector_size - 2) as usize - num_string.len()));
+            sector_marker.push('-');
+            sector_markers.push_str(sector_marker.as_str());
+        }
+
+        chunks.push('|');
+        chunks.push_str(format!(
+            "C{} ?B",
+            self.chunk_offsets_length - 1
+        ).as_str());
+        chunks.push(' ');
+        sector_markers.truncate(chunks.len());
+        return format!(
+            "Sector size: {}B\nSectors: {}\nChunks:  {}",
+            self.sector_size,
+            sector_markers,
+            chunks,
+        );
     }
 }
