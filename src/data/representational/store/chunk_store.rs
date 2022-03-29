@@ -11,6 +11,7 @@ use crate::encoding::errors::encoding_errors;
 use crate::encoding::transcoder::Transcoder;
 
 reify!{
+    #[derive(Debug,Default)]
     pub struct ChunkStore {
         pub header: ChunkStoreHeader,
         #[byte_size=8]
@@ -23,6 +24,7 @@ byte_layout!{
     ChunkStore
     composite [header, ChunkStoreHeader]
     value [chunks_length, u64, Big]
+    composite_vec [chunks, chunks_length, Chunk]
 }
 
 impl Decoder for ChunkStore {

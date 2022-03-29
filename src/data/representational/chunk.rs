@@ -7,6 +7,7 @@ use crate::{byte_layout, reify};
 use super::chunk_entry::ChunkEntry;
 
 reify! {
+    #[derive(Debug,Default,Clone)]
     pub struct Chunk {
         #[bytes_size=8]
         pub timestamp_from: u64,

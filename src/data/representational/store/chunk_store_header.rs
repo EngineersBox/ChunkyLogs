@@ -8,14 +8,14 @@ use nom::AsBytes;
 use crate::compiler::errors::proc_macro_errors::ByteLayoutParsingError;
 
 reify!{
-    #[derive(Debug,Default)]
+    #[derive(Debug,Default,Clone)]
     pub struct ChunkStoreHeader {
         #[byte_size=8]
         pub length: u64,
-        #[byte_size=8]
-        pub sector_size: u64,
-        #[byte_size=4]
-        pub chunk_count: u32,
+        #[byte_size=2]
+        pub sector_size: u16,
+        #[byte_size=2]
+        pub chunk_count: u16,
         #[byte_size=4]
         pub chunk_offsets_length: u32,
         pub chunk_offsets: Vec<ChunkOffsets>,
@@ -25,8 +25,8 @@ reify!{
 byte_layout! {
     ChunkStoreHeader
     value [length, u64, Big]
-    value [sector_size, u64, Big]
-    value [chunk_count, u32, Big]
+    value [sector_size, u16, Big]
+    value [chunk_count, u16, Big]
     value [chunk_offsets_length, u32, Big]
     composite_vec [chunk_offsets, chunk_offsets_length, ChunkOffsets]
 }

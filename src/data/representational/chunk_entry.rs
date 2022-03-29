@@ -6,7 +6,7 @@ use crate::encoding::errors::encoding_errors;
 use crate::encoding::transcoder::Transcoder;
 
 reify!{
-    #[derive(Default)]
+    #[derive(Debug,Default,Clone)]
     pub struct ChunkEntry {
         #[bytes_size=8]
         pub timestamp: u64,

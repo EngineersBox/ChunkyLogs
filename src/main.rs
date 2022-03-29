@@ -23,10 +23,15 @@ use std::io::{Error, Write};
 use std::time::Duration;
 use lazy_static::lazy_static;
 use slog::Logger;
+use crate::compiler::byte_unpack::ToVec;
 
 use crate::compression::compressor::Compressor;
 use crate::logging::logging::initialize_logging;
 use crate::configuration::config::Config;
+use crate::data::representational::chunk::Chunk;
+use crate::data::representational::chunk_entry::ChunkEntry;
+use crate::data::representational::store::chunk_offsets::ChunkOffsets;
+use crate::data::representational::store::chunk_store::ChunkStore;
 use crate::data::representational::store::chunk_store_header::ChunkStoreHeader;
 
 type Byte = u8;
@@ -113,24 +118,61 @@ fn write_test_file() {
 
 fn create_test_bytes() {
     let mut bytes: Vec<Byte> = Vec::new();
+
     let mut chunk_store_header: ChunkStoreHeader = ChunkStoreHeader{
         length: 0,
-        sector_size: 50,
+        sector_size: 30,
         chunk_count: 2,
         chunk_offsets_length: 0,
         chunk_offsets: Vec::new(),
     };
     match ChunkStoreHeader::bytes_len() {
         Ok(length) => chunk_store_header.length = length as u64,
-        Err(_) => {},
+        Err(e) => {
+            error!(crate::LOGGER, "An error occurred: {}", e.to_string());
+            return;
+        },
     };
     bytes.append(&mut chunk_store_header.into_bytes());
-    let file: io::Result<File> = File::create("data/chunk_store_header.bin");
+
+    let mut chunk: Chunk = Chunk::default();
+    let mut chunk_entry: ChunkEntry = ChunkEntry{
+        timestamp: 0,
+        action: 0,
+        target: "some target".as_bytes().to_vec(),
+        message: "test log entry or something".as_bytes().to_vec(),
+    };
+    chunk_entry.target.push(0x00);
+    chunk_entry.message.push(0x00);
+    for i in 0..2 {
+        chunk_entry.timestamp = i as u64;
+        chunk_entry.action = i as u8;
+        chunk.entries.push(chunk_entry.clone());
+        chunk.length += 1;
+    }
+    chunk.timestamp_from = 0;
+    chunk.timestamp_to = 1;
+    let chunk_full_length: usize = chunk.into_bytes().len();
+
+    let mut chunk_store: ChunkStore = ChunkStore::default();
+    chunk_store.header = chunk_store_header;
+    let chunk_offset: ChunkOffsets = ChunkOffsets{
+        sector_index: (chunk_full_length as u16 / chunk_store.header.sector_size) as u32,
+        sector_offset: (chunk_full_length as u16 % chunk_store.header.sector_size) as u16,
+    };
+    for _ in 0..chunk_store.header.chunk_count {
+        chunk_store.chunks.push(chunk.clone());
+        chunk_store.header.chunk_offsets.push(chunk_offset.clone());
+        chunk_store.header.chunk_offsets_length += chunk_offset.into_bytes().len() as u32;
+    }
+    chunk_store.chunks_length = chunk_full_length as u64;
+
+    let file: io::Result<File> = File::create("data/chunk_store.bin");
     if file.is_ok() {
-        match file.unwrap().write_all(bytes.as_slice()) {
+        match file.unwrap().write_all(chunk_store.into_bytes().as_slice()) {
             Ok(_) => {},
             Err(e) => {
-                error!(crate::LOGGER, "An error occurred: {}", e.to_string());
+                error!(crate::LOGGER, "Error while writing to file: {}", e.to_string());
                 return;
             }
         }
@@ -142,16 +184,13 @@ fn main() {
     // let mut properties: Config = Config::new("config/config.properties");
     // properties.read();
 
-    // create_test_bytes();
+    create_test_bytes();
     let mut chunk_store_header: ChunkStoreHeader = ChunkStoreHeader::default();
-    let file: io::Result<File> = File::open("data/chunk_store_header.bin");
+    let file: io::Result<File> = File::open("data/chunk_store.bin");
     if file.is_ok() {
         match chunk_store_header.read_from_file(&file.unwrap()) {
             Ok(_) => info!(crate::LOGGER, "Header: {:?}", chunk_store_header),
-            Err(e) => {
-                error!(crate::LOGGER, "An error occurred: {}", e.to_string());
-                return;
-            }
+            Err(e) => error!(crate::LOGGER, "An error occurred: {}", e.to_string()),
         }
     }
 
