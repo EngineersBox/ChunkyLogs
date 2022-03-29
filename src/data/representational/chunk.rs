@@ -1,6 +1,4 @@
 use crate::data::abstraction::log_group::LogGroup;
-use crate::encoding::decoder::Decoder;
-use crate::encoding::encoder::Encoder;
 use crate::encoding::errors::encoding_errors;
 use crate::encoding::transcoder::Transcoder;
 use crate::{byte_layout, reify};
@@ -25,18 +23,6 @@ byte_layout! {
     value [timestamp_to, u64, Big]
     value [length, u32, Big]
     composite_vec [entries, length, ChunkEntry]
-}
-
-impl Decoder for Chunk {
-    fn decode(from: &Vec<u8>) -> Result<Box<Self>, encoding_errors::DecoderError<Vec<u8>>> {
-        todo!("Implement decoding for Chunk")
-    }
-}
-
-impl Encoder for Chunk {
-    fn encode(&self) -> Result<Vec<u8>, encoding_errors::EncoderError<Vec<u8>>> {
-        todo!("Implement decoding for Chunk")
-    }
 }
 
 impl Transcoder<LogGroup> for Chunk {

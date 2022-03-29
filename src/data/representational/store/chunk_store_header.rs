@@ -2,10 +2,10 @@ use crate::{byte_layout, reify};
 use super::chunk_offsets::ChunkOffsets;
 use std::fs::File;
 use std::io;
-use std::io::ErrorKind;
+use std::io::{BufReader, ErrorKind, Read, Seek};
 use memmap::{Mmap, MmapOptions};
 use nom::AsBytes;
-use crate::compiler::errors::proc_macro_errors::{ByteLayoutParsingError, StructFieldNotFoundError};
+use crate::compiler::errors::proc_macro_errors::StructFieldNotFoundError;
 
 reify!{
     #[derive(Debug,Default,Clone)]
@@ -62,31 +62,23 @@ impl ChunkStoreHeader {
             Ok(v) => v,
             Err(e) => return Err(e),
         };
-        let mut mmap_file: Mmap = unsafe {
-            MmapOptions::new()
-                .len(header_length_bytes)
-                .map(file)?
-        };
-        let length_bytes: &[u8] = mmap_file.as_bytes();
-        if length_bytes.len() > 8 {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                "Length was not a u64"
-            ));
-        }
-        let sized_length_bytes: u64 = match nom::number::complete::be_u64::<_, nom::error::Error<_>>(length_bytes) {
+        let mut buf_reader: BufReader<&File> = BufReader::new(file);
+        let mut length_bytes: Vec<u8> = Vec::with_capacity(header_length_bytes);
+        buf_reader.by_ref()
+            .take(header_length_bytes as u64)
+            .read_to_end(&mut length_bytes)?;
+        let sized_length_bytes: u64 = match nom::number::complete::be_u64::<_, nom::error::Error<_>>(length_bytes.as_bytes()) {
             Ok((_, v)) => v,
             Err(e) => return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 e.to_string(),
             )),
         };
-        mmap_file = unsafe {
-            MmapOptions::new()
-                .len(sized_length_bytes as usize)
-                .map(file)?
-        };
-        return match self.parse_bytes::<&'_ [u8], nom::error::Error<_>>(mmap_file.as_bytes()) {
+        let mut header_bytes: Vec<u8> = Vec::with_capacity(sized_length_bytes as usize);
+        buf_reader.rewind()?;
+        buf_reader.take(sized_length_bytes as u64)
+            .read_to_end(&mut header_bytes)?;
+        return match self.parse_bytes::<&'_ [u8], nom::error::Error<_>>(header_bytes.as_bytes()) {
             Ok(_) => Ok(()),
             Err(e) => Err(io::Error::new(
                 ErrorKind::InvalidInput,
