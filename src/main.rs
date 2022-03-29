@@ -148,11 +148,11 @@ fn create_test_bytes() {
 
     let mut chunk_store: ChunkStore = ChunkStore::default();
     chunk_store.header = chunk_store_header;
-    let chunk_offset: ChunkOffsets = ChunkOffsets{
-        sector_index: (chunk_full_length as u16 / chunk_store.header.sector_size) as u32,
-        sector_offset: (chunk_full_length as u16 % chunk_store.header.sector_size) as u16,
-    };
-    for _ in 0..chunk_store.header.chunk_count {
+    for i in 0..chunk_store.header.chunk_count {
+        let chunk_offset: ChunkOffsets = ChunkOffsets{
+            sector_index: ((i as u32 * chunk_full_length  as u32) / (chunk_store.header.sector_size as u32 * (chunk_store.header.chunk_offsets_length as u32) + 1)  as u32) as u32,
+            sector_offset: ((i * chunk_full_length as u16) % chunk_store.header.sector_size as u16) as u16,
+        };
         chunk_store.header.chunk_offsets.push(chunk_offset.clone());
         chunk_store.header.chunk_offsets_length += 1;
     }
