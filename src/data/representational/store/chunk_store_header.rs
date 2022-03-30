@@ -1,9 +1,10 @@
-use crate::{byte_layout, reify};
+use crate::{byte_layout, Chunk, ChunkStore, reify};
 use super::chunk_offsets::ChunkOffsets;
 use std::fs::File;
 use std::io;
 use std::io::{BufReader, ErrorKind, Read, Seek};
-use nom::{AsBytes, ExtendInto};
+use memmap::{Mmap, MmapOptions};
+use nom::AsBytes;
 
 
 reify!{
@@ -85,7 +86,7 @@ impl ChunkStoreHeader {
             )),
         };
     }
-    pub fn string_format_chunk_sector_ratio(&self) -> String {
+    pub fn string_format_chunk_sector_ratio(&self, file: &File) -> Result<String, io::Error> {
         let mut chunks_outer: String = String::new();
         let mut chunks: String = String::new();
         for i in 0..(self.chunk_offsets_length - 1) {
@@ -96,7 +97,7 @@ impl ChunkStoreHeader {
             let mut chunk_str: String = String::new();
             chunk_str.push('|');
             chunk_str.push_str(format!(
-                "C{} {}B",
+                "{} {}B",
                 i,
                 chunk_size
             ).as_str());
@@ -105,9 +106,34 @@ impl ChunkStoreHeader {
             chunks.push_str(chunk_str.as_str());
         }
         let last_offset: &ChunkOffsets = self.chunk_offsets.get((self.chunk_offsets_length - 1) as usize).unwrap();
+        let chunk_length: u32 = match Chunk::header_length() {
+            Ok(v) => v,
+            Err(e) => return Err(e),
+        };
+        let chunk_store_chunks_length_bytes_length: u64 = match ChunkStore::chunks_length_bytes_length() {
+            Ok(v) => v,
+            Err(e) => return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                e.to_string(),
+            )),
+        };
+        let mmap_file: Mmap = unsafe {
+            MmapOptions::new()
+                .offset(self.length + chunk_store_chunks_length_bytes_length + (last_offset.sector_index as u64 * self.sector_size as u64) + last_offset.sector_offset as u64)
+                .len(chunk_length as usize)
+                .map(file)?
+        };
+        let last_chunk_length: u32 = match nom::number::complete::be_u32::<_, nom::error::Error<_>>(mmap_file.as_bytes()) {
+            Ok((_, v)) => v,
+            Err(e) => return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                e.to_string(),
+            )),
+        };
+
         let mut sector_markers_outer: String = String::new();
         let mut sector_markers: String = String::new();
-        for i in 0..(last_offset.sector_index + 1) {
+        for i in 0..(last_offset.sector_index + (last_chunk_length / self.sector_size as u32) + 1) {
             sector_markers_outer.push('+');
             sector_markers_outer.push_str("-".repeat((self.sector_size - 1) as usize).as_str());
             sector_markers.push('|');
@@ -120,17 +146,18 @@ impl ChunkStoreHeader {
         let mut last_chunk: String = String::new();
         last_chunk.push('|');
         last_chunk.push_str(format!(
-            "C{} ?B",
-            self.chunk_offsets_length - 1
+            "{} {}B",
+            self.chunk_offsets_length - 1,
+            last_chunk_length
         ).as_str());
-        last_chunk.push(' ');
+        last_chunk.push_str(" ".repeat(last_chunk_length as usize - last_chunk.len()).as_str());
         chunks.push_str(last_chunk.as_str());
 
         chunks_outer.push('+');
-        chunks_outer.push_str("-".repeat(last_chunk.len() - 1).as_str());
-        sector_markers.truncate(chunks.len());
-        sector_markers_outer.truncate(chunks.len());
-        return format!(
+        chunks_outer.push_str("-".repeat((last_chunk_length - 1) as usize).as_str());
+        sector_markers.truncate(chunks_outer.len());
+        sector_markers_outer.truncate(chunks_outer.len());
+        return Ok(format!(
             "Sector size: {}B\n         {}\nSectors: {}\n         {}\nChunks:  {}\n         {}",
             self.sector_size,
             sector_markers_outer,
@@ -138,6 +165,6 @@ impl ChunkStoreHeader {
             chunks_outer,
             chunks,
             chunks_outer,
-        );
+        ));
     }
 }

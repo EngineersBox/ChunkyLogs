@@ -24,6 +24,8 @@ use std::time::Duration;
 use lazy_static::lazy_static;
 use slog::Logger;
 use crate::compiler::byte_unpack::ToVec;
+use lipsum::lipsum;
+use rand::Rng;
 
 use crate::compression::compressor::Compressor;
 use crate::logging::logging::initialize_logging;
@@ -117,6 +119,7 @@ fn write_test_file() {
 }
 
 fn create_test_bytes() {
+    let mut rng = rand::thread_rng();
     let mut bytes: Vec<Byte> = Vec::new();
 
     let mut chunk_store_header: ChunkStoreHeader = ChunkStoreHeader{
@@ -128,17 +131,14 @@ fn create_test_bytes() {
     };
 
     let mut chunk: Chunk = Chunk::default();
-    let mut chunk_entry: ChunkEntry = ChunkEntry{
-        timestamp: 0,
-        action: 0,
-        target: "some target".as_bytes().to_vec(),
-        message: "test log entry or something".as_bytes().to_vec(),
-    };
+    let mut chunk_entry: ChunkEntry = ChunkEntry::default();
     chunk_entry.target.push(0x00);
     chunk_entry.message.push(0x00);
     for i in 0..2 {
         chunk_entry.timestamp = i as u64;
         chunk_entry.action = i as u8;
+        chunk_entry.target = lipsum::lipsum(rng.gen_range(1..5)).as_bytes().to_vec();
+        chunk_entry.message = lipsum::lipsum_words(rng.gen_range(10..20)).as_bytes().to_vec();
         chunk.entries.append(&mut chunk_entry.into_bytes());
         chunk.entries_length += 1;
     }
@@ -157,15 +157,17 @@ fn create_test_bytes() {
 
     let mut chunk_store: ChunkStore = ChunkStore::default();
     chunk_store.header = chunk_store_header;
-    for i in 0..chunk_store.header.chunk_count {
+    let mut running_length: u32 = 0;
+    for _ in 0..chunk_store.header.chunk_count {
         let chunk_offset: ChunkOffsets = ChunkOffsets{
-            sector_index: ((i as u32 * chunk.length) / (chunk_store.header.sector_size as u32 * (chunk_store.header.chunk_offsets_length as u32) + 1)  as u32) as u32,
-            sector_offset: ((i * chunk.length as u16) % chunk_store.header.sector_size as u16) as u16,
+            sector_index: running_length / chunk_store.header.sector_size as u32,
+            sector_offset: running_length as u16 % chunk_store.header.sector_size as u16,
         };
-        chunk_store.header.chunk_offsets.push(chunk_offset.clone());
+        chunk_store.header.chunk_offsets.push(chunk_offset);
         chunk_store.header.chunk_offsets_length += 1;
         chunk_store.chunks.push(chunk.clone());
         chunk_store.chunks_length += 1;
+        running_length += chunk.length;
     }
     chunk_store.header.length = chunk_store.header.into_bytes().len() as u64;
 
@@ -190,14 +192,20 @@ fn main() {
 
     create_test_bytes();
     let mut chunk_store_header: ChunkStoreHeader = ChunkStoreHeader::default();
-    let file: io::Result<File> = File::open("data/chunk_store.bin");
+    let mut file: io::Result<File> = File::open("data/chunk_store.bin");
     if file.is_ok() {
         match chunk_store_header.read_from_file(&file.unwrap()) {
             Ok(_) => info!(crate::LOGGER, "Header: {:?}", chunk_store_header),
             Err(e) => error!(crate::LOGGER, "An error occurred: {}", e.to_string()),
         }
     }
-    info!(crate::LOGGER, "{}", chunk_store_header.string_format_chunk_sector_ratio());
+    file = File::open("data/chunk_store.bin");
+    if file.is_ok() {
+        match chunk_store_header.string_format_chunk_sector_ratio(&file.unwrap()) {
+            Ok(s) => info!(crate::LOGGER, "{}", s),
+            Err(e) => error!(crate::LOGGER, "An error occurred: {}", e.to_string()),
+        };
+    }
 
     std::thread::sleep(Duration::from_millis(1000));
 }
