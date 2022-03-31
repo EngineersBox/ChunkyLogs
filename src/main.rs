@@ -6,6 +6,7 @@ mod configuration;
 mod macros;
 mod encoding;
 mod compiler;
+mod utils;
 
 #[macro_use]
 extern crate slog;
