@@ -57,12 +57,11 @@ impl ChunkStoreHeader {
             Err(_) => Ok(0),
         };
     }
-    pub fn read_from_file(&mut self, file: &File) -> Result<(), io::Error> {
+    pub fn read_from_file(&mut self, buf_reader: &mut BufReader<&File>) -> Result<(), io::Error> {
         let header_length: usize = match Self::header_length() {
             Ok(v) => v,
             Err(e) => return Err(e),
         };
-        let mut buf_reader: BufReader<&File> = BufReader::new(file);
         let mut length_bytes: Vec<u8> = Vec::with_capacity(header_length);
         buf_reader.by_ref()
             .take(header_length as u64)

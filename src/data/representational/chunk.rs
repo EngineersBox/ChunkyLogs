@@ -2,7 +2,6 @@ use crate::data::abstraction::log_group::LogGroup;
 use crate::encoding::errors::encoding_errors;
 use crate::encoding::transcoder::Transcoder;
 use crate::{byte_layout, reify};
-use super::chunk_entry::ChunkEntry;
 
 reify! {
     #[derive(Debug,Default,Clone)]

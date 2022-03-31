@@ -129,21 +129,24 @@ fn main() {
     // properties.read();
 
     create_test_bytes();
-    let mut chunk_store_header: ChunkStoreHeader = ChunkStoreHeader::default();
+    let mut chunk_store: ChunkStore = ChunkStore::default();
     let mut file: io::Result<File> = File::open("data/chunk_store.bin");
     if file.is_ok() {
-        match chunk_store_header.read_from_file(&file.unwrap()) {
-            Ok(_) => info!(crate::LOGGER, "Header: {:?}", chunk_store_header),
+        match ChunkStore::read_from_file("data/chunk_store.bin") {
+            Ok(cs) => {
+                chunk_store = cs;
+                info!(crate::LOGGER, "Header: {:?}", chunk_store);
+            },
             Err(e) => error!(crate::LOGGER, "An error occurred: {}", e.to_string()),
         }
     }
-    file = File::open("data/chunk_store.bin");
-    if file.is_ok() {
-        match chunk_store_header.string_format_chunk_sector_ratio(&file.unwrap()) {
-            Ok(s) => info!(crate::LOGGER, "{}", s),
-            Err(e) => error!(crate::LOGGER, "An error occurred: {}", e.to_string()),
-        };
-    }
+    // file = File::open("data/chunk_store.bin");
+    // if file.is_ok() {
+    //     match chunk_store.header.string_format_chunk_sector_ratio(&file.unwrap()) {
+    //         Ok(s) => info!(crate::LOGGER, "{}", s),
+    //         Err(e) => error!(crate::LOGGER, "An error occurred: {}", e.to_string()),
+    //     };
+    // }
 
     std::thread::sleep(Duration::from_millis(1000));
 }
