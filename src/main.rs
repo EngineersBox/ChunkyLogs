@@ -56,73 +56,11 @@ macro_rules! print_chunk_data {
     }
 }
 
-fn write_test_file() {
-    let log_entry: &[Byte] = "test log entry or something".as_bytes();
-    let log_target: &[Byte] = "test target".as_bytes();
-    let mut entries: Vec<Byte> = Vec::new();
-    for i in (0 as u64)..(10 as u64) {
-        let ts_bytes: [Byte; 8] = ((i * 1000) as u64).to_be_bytes();
-        for ts_byte in ts_bytes.iter() {
-            entries.push(*ts_byte);
-        }
-        entries.push((((i % 4) + 4) % 4) as Byte);
-        for target_byte in log_target.iter() {
-            entries.push(*target_byte);
-        }
-        entries.push(0x00);
-        for entry_byte in log_entry.iter() {
-            entries.push(*entry_byte);
-        }
-        entries.push(0x00);
-    }
-    entries.push(0x00);
-
-    let mut chunk_bytes: Vec<Byte> = vec!(
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09,
-    );
-
-    let mut compressor: Compressor = Compressor::new();
-    match compressor.compress_vec(&entries) {
-        Ok(b) => entries = b,
-        Err(e) => {
-            error!(crate::LOGGER, "An error occurred: {}", e.message);
-            return;
-        }
-    }
-
-    for entries_len_bytes in (entries.len() as u32).to_be_bytes().iter() {
-        chunk_bytes.push(*entries_len_bytes);
-    }
-    chunk_bytes.append(&mut entries);
-
-    let mut bytes: Vec<Byte> = Vec::new();
-    let length_bytes: [Byte; 8] = ((chunk_bytes.len() * 2) as u64).to_be_bytes();
-    bytes.append(length_bytes.to_vec().as_mut());
-
-    let offset_bytes: [Byte; 8] = (chunk_bytes.len() as u64).to_be_bytes();
-    bytes.append(offset_bytes.to_vec().as_mut());
-
-    bytes.append(chunk_bytes.to_vec().as_mut());
-    bytes.append(chunk_bytes.to_vec().as_mut());
-
-    let mut file: io::Result<File> = File::create("data/log_chunks.bin");
-    if file.is_ok() {
-        match file.unwrap().write_all(bytes.as_slice()) {
-            Ok(_) => {},
-            Err(e) => {
-                error!(crate::LOGGER, "An error occurred: {}", e.to_string());
-                return;
-            }
-        }
-    }
-}
-
 fn create_test_bytes() {
     let mut rng = rand::thread_rng();
     let mut bytes: Vec<Byte> = Vec::new();
 
-    let mut chunk_store_header: ChunkStoreHeader = ChunkStoreHeader{
+    let chunk_store_header: ChunkStoreHeader = ChunkStoreHeader{
         length: 0,
         sector_size: 30,
         chunk_count: 2,
@@ -209,78 +147,3 @@ fn main() {
 
     std::thread::sleep(Duration::from_millis(1000));
 }
-
-/*
-* ==== HEADER ====
-* 00, 00, 00, 00, 00, 00, 01, FF,
-* 00, 00, 00, 00, 00, 00, 00, 00,
-* 00, 00, 00, 02,
-* 00, 00, 00, 00,
-* --- CHUNK OFFSET 0 ----
-* 00, 00, 00, 00
-* 00,
-* 00, 00, 00, 00
-* --- CHUNK OFFSET 1 ----
-*
-* ==== CHUNK 0 ====
-* ...
-* ==== CHUNK 1 ====
-* ---- CHUNK HEADER ----
-* 00, 00, 00, 00, 00, 00, 00, 00,
-* 00, 00, 00, 00, 00, 00, 00, 01,
-* 00, 00, 01, EB,
-*  ---- DECOMPRESSED DATA ----
-* 00, 00, 00, 00, 00, 00, 00, 00,
-* 00,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00, 00, 00, 00, 00, 00, 00, 01,
-* 01,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00, 00, 00, 00, 00, 00, 00, 02,
-* 02,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00, 00, 00, 00, 00, 00, 00, 03,
-* 03,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00, 00, 00, 00, 00, 00, 00, 04,
-* 00,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00, 00, 00, 00, 00, 00, 00, 05,
-* 01,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00, 00, 00, 00, 00, 00, 00, 06,
-* 02,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00, 00, 00, 00, 00, 00, 00, 07,
-* 03,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00, 00, 00, 00, 00, 00, 00, 08,
-* 00,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00, 00, 00, 00, 00, 00, 00, 09,
-* 01,
-* 74, 65, 73, 74, 20, 74, 61, 72, 67, 65, 74, 00,
-* 74, 65, 73, 74, 20, 6C, 6F, 67, 20, 65, 6E, 74, 72, 79, 20, 6F, 72, 20, 73, 6F, 6D, 65, 74, 68, 69, 6E, 67, 00,
-*
-* 00
-* ---- END ----
-*/
-
