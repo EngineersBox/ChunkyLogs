@@ -72,11 +72,11 @@ impl ChunkStore {
         let mut length_bytes: Vec<u8> = Vec::with_capacity(8usize);
         buf_reader.get_ref()
             .take(8)
-            .read_to_end(&mut length_bytes);
+            .read_to_end(&mut length_bytes)?;
         store.chunks_length = match nom::number::complete::be_u64::<_, nom::error::Error<_>>(length_bytes.as_bytes()) {
             Ok((_, v)) => v,
             Err(e) => return Err(Error::new(
-                std::io::ErrorKind::InvalidData,
+                std::io::ErrorKind::InvalidData
                 e.to_string(),
             )),
         };
@@ -91,20 +91,20 @@ impl ChunkStore {
             ))
         };
         buf_reader.seek_relative(last_offset.calculate_offset(store.header.sector_size as u32) as i64)?;
-        let mut chunk_length_bytes: Vec<u8> = Vec::with_capacity(4usize);
+        let chunk_length_bytes: Vec<u8> = Vec::with_capacity(4usize);
         buf_reader.get_ref()
             .take(4)
-            .read_to_end(&mut length_bytes);
+            .read_to_end(&mut length_bytes)?;
         let chunk_length: u32 = match nom::number::complete::be_u32::<_, nom::error::Error<_>>(chunk_length_bytes.as_bytes()) {
             Ok((_, v)) => v,
             Err(e) => return Err(Error::new(
                 std::io::ErrorKind::InvalidData,
                 e.to_string(),
             )),
-        };buf_reader.seek_relative(-(chunk_length as i64));
+        };buf_reader.seek_relative(-(chunk_length as i64))?;
         let chunk_bytes: Vec<u8> = Vec::with_capacity(chunk_length as usize);
         buf_reader.take(chunk_length as u64)
-            .read_to_end(&mut length_bytes);
+            .read_to_end(&mut length_bytes)?;
         return match store.latest_chunk.parse_bytes::<&'_ [u8], nom::error::Error<_>>(chunk_bytes.as_bytes()) {
             Ok(_) => Ok(store),
             Err(e) => Err(Error::new(
