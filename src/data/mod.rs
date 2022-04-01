@@ -1,5 +1,2 @@
-pub mod chunk;
-pub mod group;
-pub mod datetime;
-pub mod store;
-pub mod bytes;
+pub mod representational;
+pub mod abstraction;

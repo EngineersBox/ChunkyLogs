@@ -2,7 +2,7 @@
 name = "chunky_logs"
 version = "0.1.0"
 authors = ["Jack Kilrain (EngineersBox)"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -21,3 +21,7 @@ slog-json = "2.3.0"
 lazy_static = "1.4.0"
 regex = "1.4.3"
 flate2 = { version = "1.0", features = ["zlib-ng-compat"], default-features = false }
+memmap = "0.7.0"
+nom = "7.1.1"
+lipsum = "0.8.0"
+rand = "0.8.5"
