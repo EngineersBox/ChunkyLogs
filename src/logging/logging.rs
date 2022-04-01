@@ -119,13 +119,13 @@ pub fn initialize_logging(prefix: String) ->  Logger {
         Err(_) => { directory_creation_message = "Logging directory already exists, skipping";}
     }
 
-    // let log_file_path: String = format!("{}{}{}",(log_path + prefix.as_str()).as_str(),chrono::Utc::now().to_string(),".log");
-    // let file: File = OpenOptions::new()
-    //     .create(true)
-    //     .write(true)
-    //     .truncate(true)
-    //     .open(log_file_path.as_str())
-    //     .unwrap();
+    let log_file_path: String = format!("{}{}{}",(log_path + prefix.as_str()).as_str(),chrono::Utc::now().to_string(),".log");
+    let file: File = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(log_file_path.as_str())
+        .unwrap();
 
     let decorator: TermDecorator = TermDecorator::new()
         .force_color()
@@ -142,9 +142,9 @@ pub fn initialize_logging(prefix: String) ->  Logger {
         .build()
         .fuse();
     // Define drain for JSON file writing
-    // let d2: FuseJF = Json::default(file).fuse();
+    let d2: FuseJF = Json::default(file).fuse();
     // Define mutex for drain access to assure thread safety
-    let both = Mutex::new(d1).fuse();
+    let both: FuseMD = Mutex::new(Duplicate::new(d1, d2)).fuse();
     // Create async access for for logging with Blocking strategy to queue up asynced methods
     let both: Fuse<Async> = Async::new(both)
         .overflow_strategy(OverflowStrategy::Block)
